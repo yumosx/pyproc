@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/s21066/pyproc/internal/protocol"
+	"github.com/YuminosukeSato/pyproc/internal/protocol"
 )
 
 func TestFramer_WriteMessage(t *testing.T) {

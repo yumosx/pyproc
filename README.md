@@ -2,7 +2,7 @@
 
 *Run Python like a local function from Go — no CGO, no microservices.*
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/s21066/pyproc.svg)](https://pkg.go.dev/github.com/s21066/pyproc)
+[![Go Reference](https://pkg.go.dev/badge/github.com/YuminosukeSato/pyproc.svg)](https://pkg.go.dev/github.com/YuminosukeSato/pyproc)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 ## Features
@@ -18,7 +18,7 @@
 ### 1. Install
 
 ```bash
-go get github.com/s21066/pyproc
+go get github.com/YuminosukeSato/pyproc
 ```
 
 ### 2. Create a Python Worker
@@ -44,7 +44,7 @@ package main
 import (
     "context"
     "fmt"
-    "github.com/s21066/pyproc/pkg/pyproc"
+    "github.com/YuminosukeSato/pyproc/pkg/pyproc"
 )
 
 func main() {
@@ -216,11 +216,11 @@ pool, _ := pyproc.NewPool(ctx, pyproc.PoolOptions{
 - [Design Document](docs/design.md)
 - [Operations Guide](docs/ops.md)
 - [Security Guide](docs/security.md)
-- [API Reference](https://pkg.go.dev/github.com/s21066/pyproc)
+- [API Reference](https://pkg.go.dev/github.com/YuminosukeSato/pyproc)
 
 ## Contributing
 
-We welcome contributions! Check out our ["help wanted"](https://github.com/s21066/pyproc/labels/help%20wanted) issues to get started.
+We welcome contributions! Check out our ["help wanted"](https://github.com/YuminosukeSato/pyproc/labels/help%20wanted) issues to get started.
 
 ## License
 

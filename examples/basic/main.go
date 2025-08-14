@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/s21066/pyproc/internal/framing"
-	"github.com/s21066/pyproc/internal/protocol"
-	"github.com/s21066/pyproc/pkg/pyproc"
+	"github.com/YuminosukeSato/pyproc/internal/framing"
+	"github.com/YuminosukeSato/pyproc/internal/protocol"
+	"github.com/YuminosukeSato/pyproc/pkg/pyproc"
 )
 
 func main() {

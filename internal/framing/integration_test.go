@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/s21066/pyproc/internal/framing"
-	"github.com/s21066/pyproc/internal/protocol"
+	"github.com/YuminosukeSato/pyproc/internal/framing"
+	"github.com/YuminosukeSato/pyproc/internal/protocol"
 )
 
 // TestGoToPythonCommunication tests actual communication between Go and Python
