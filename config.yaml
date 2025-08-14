@@ -1,0 +1,75 @@
+# Default configuration for pyproc
+pool:
+  # Number of Python worker processes
+  workers: 4
+  
+  # Maximum concurrent requests per worker
+  max_in_flight: 10
+  
+  # Worker startup timeout in seconds
+  start_timeout: 30
+  
+  # Worker health check interval in seconds
+  health_interval: 30
+  
+  # Restart policy
+  restart:
+    # Maximum restart attempts before giving up
+    max_attempts: 5
+    # Initial backoff duration in milliseconds
+    initial_backoff: 1000
+    # Maximum backoff duration in milliseconds
+    max_backoff: 30000
+    # Backoff multiplier
+    multiplier: 2.0
+
+python:
+  # Python executable path
+  executable: "python3"
+  
+  # Worker script path
+  worker_script: "./worker.py"
+  
+  # Environment variables for Python process
+  env:
+    PYTHONUNBUFFERED: "1"
+
+socket:
+  # Directory for Unix domain socket files
+  dir: "/tmp"
+  
+  # Socket file prefix
+  prefix: "pyproc"
+  
+  # Socket permissions (octal)
+  permissions: 0600
+
+protocol:
+  # Frame size limit in bytes (default 10MB)
+  max_frame_size: 10485760
+  
+  # Request timeout in seconds
+  request_timeout: 60
+  
+  # Connection timeout in seconds
+  connection_timeout: 5
+
+logging:
+  # Log level (debug, info, warn, error)
+  level: "info"
+  
+  # Log format (json, text)
+  format: "json"
+  
+  # Include trace ID in logs
+  trace_enabled: true
+
+metrics:
+  # Enable metrics collection
+  enabled: true
+  
+  # Metrics endpoint
+  endpoint: ":9090"
+  
+  # Metrics path
+  path: "/metrics"
