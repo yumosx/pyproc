@@ -73,7 +73,7 @@ if __name__ == "__main__":
 	if err != nil {
 		t.Errorf("Failed to connect to worker socket: %v", err)
 	} else {
-		conn.Close()
+		_ = conn.Close()
 	}
 
 	// Check worker status
