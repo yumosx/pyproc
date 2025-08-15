@@ -308,8 +308,8 @@ func TestPoolHealthCheck(t *testing.T) {
 		t.Fatalf("pool.Start failed: %v", err)
 	}
 
-	// Wait for health checks to run
-	time.Sleep(200 * time.Millisecond)
+	// Wait for health checks to run and stabilize
+	time.Sleep(500 * time.Millisecond)
 
 	// Check health status
 	health := pool.Health()

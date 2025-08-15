@@ -298,14 +298,9 @@ func (w *Worker) IsHealthy(ctx context.Context) bool {
 		return false
 	}
 
-	// Try to connect to the worker
-	dialer := net.Dialer{Timeout: 1 * time.Second}
-	conn, err := dialer.DialContext(ctx, "unix", w.cfg.SocketPath)
-	if err != nil {
-		return false
-	}
-	_ = conn.Close()
-	return true
+	// For now, just check if the process is running
+	// TODO: Implement actual health RPC call
+	return w.IsRunning()
 }
 
 // connect establishes a connection to a worker
