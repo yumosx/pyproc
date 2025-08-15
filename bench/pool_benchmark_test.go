@@ -10,40 +10,42 @@ import (
 	"github.com/YuminosukeSato/pyproc/pkg/pyproc"
 )
 
-// BenchmarkSingleWorker benchmarks a single worker without pool
+// BenchmarkSingleWorker benchmarks a single worker using pool with workers=1
 func BenchmarkSingleWorker(b *testing.B) {
-	cfg := pyproc.WorkerConfig{
-		ID:           "bench-worker",
-		SocketPath:   "/tmp/bench-single.sock",
-		PythonExec:   "python3",
-		WorkerScript: "../examples/basic/worker.py",
-		StartTimeout: 5 * time.Second,
+	opts := pyproc.PoolOptions{
+		Config: pyproc.PoolConfig{
+			Workers:     1,
+			MaxInFlight: 1,
+		},
+		WorkerConfig: pyproc.WorkerConfig{
+			ID:           "bench-worker",
+			SocketPath:   "/tmp/bench-single.sock",
+			PythonExec:   "python3",
+			WorkerScript: "../examples/basic/worker.py",
+			StartTimeout: 5 * time.Second,
+		},
 	}
 
-	worker := pyproc.NewWorker(cfg, nil)
-	ctx := context.Background()
-
-	if err := worker.Start(ctx); err != nil {
-		b.Fatalf("failed to start worker: %v", err)
-	}
-	defer worker.Stop()
-
-	// Wait for worker to be ready
-	time.Sleep(500 * time.Millisecond)
-
-	// Connect to worker
-	conn, err := pyproc.ConnectToWorker(cfg.SocketPath, 5*time.Second)
+	pool, err := pyproc.NewPool(opts, nil)
 	if err != nil {
-		b.Fatalf("failed to connect: %v", err)
+		b.Fatalf("failed to create pool: %v", err)
 	}
-	defer conn.Close()
+
+	ctx := context.Background()
+	if err := pool.Start(ctx); err != nil {
+		b.Fatalf("failed to start pool: %v", err)
+	}
+	defer pool.Shutdown(ctx)
+
+	// Wait for pool to be ready
+	time.Sleep(500 * time.Millisecond)
 
 	input := map[string]interface{}{"value": 42}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var output map[string]interface{}
-		if err := conn.Call(ctx, "predict", input, &output); err != nil {
+		if err := pool.Call(ctx, "predict", input, &output); err != nil {
 			b.Fatalf("call failed: %v", err)
 		}
 	}

@@ -35,6 +35,42 @@ pyproc lets you call Python functions from Go as if they were local functions, w
 - **Simple deployment** - Just your Go binary + Python scripts
 - **Connection pooling** - Reuse connections for high throughput
 
+## 🎯 Target Audience & Use Cases
+
+**Perfect for teams who need to:**
+- Integrate existing Python ML models (PyTorch, TensorFlow, scikit-learn) into Go services
+- Process data with Python libraries (pandas, numpy) from Go applications
+- Handle 1-5k RPS with JSON payloads under 100KB
+- Deploy on the same host/pod without network complexity
+- Migrate gradually from Python microservices to Go while preserving Python logic
+
+**Ideal deployment scenarios:**
+- Kubernetes same-pod deployments with shared volume for UDS
+- Docker containers with shared socket volumes
+- Traditional server deployments on Linux/macOS
+
+## ❌ Non-Goals
+
+pyproc is **NOT** designed for:
+- **Cross-host communication** - Use gRPC/REST APIs for distributed systems
+- **Windows UDS support** - Windows named pipes are not supported
+- **GPU management** - Use dedicated ML serving frameworks (TensorRT, Triton)
+- **Large-scale ML serving** - Consider Ray Serve, MLflow, or KServe for enterprise ML
+- **Real-time streaming** - Use Apache Kafka or similar for high-throughput streams
+- **Database operations** - Use native Go database drivers directly
+
+## 📋 Compatibility Matrix
+
+| Component | Requirements |
+|-----------|-------------|
+| **Operating System** | Linux, macOS (Unix Domain Sockets required) |
+| **Go Version** | 1.22+ |
+| **Python Version** | 3.7+ (3.8+ recommended) |
+| **Deployment** | Same host/pod only |
+| **Container Runtime** | Docker, containerd, any OCI-compatible |
+| **Orchestration** | Kubernetes (same-pod), Docker Compose, systemd |
+| **Architecture** | amd64, arm64 |
+
 ## ✨ Features
 
 - **No CGO Required** - Pure Go implementation using Unix Domain Sockets
@@ -592,14 +628,79 @@ pool, _ := pyproc.NewPool(ctx, pyproc.PoolOptions{
 })
 ```
 
+## 🚀 Operational Standards
+
+### Performance Targets
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **Latency (p50)** | < 100μs | Simple function calls |
+| **Latency (p99)** | < 500μs | Including GC and process overhead |
+| **Throughput** | 1-5k RPS | Per service instance |
+| **Payload Size** | < 100KB | JSON request/response |
+| **Worker Count** | 2-8 per CPU core | Based on workload type |
+
+### Health & Monitoring
+
+**Required Metrics:**
+- Request latency (p50, p95, p99)
+- Request rate and error rate
+- Worker health status
+- Connection pool utilization
+- Python process memory usage
+
+**Health Check Endpoints:**
+```go
+// Built-in health check
+health := pool.Health()
+if health.HealthyWorkers < health.TotalWorkers/2 {
+    log.Warn("majority of workers unhealthy")
+}
+```
+
+**Alerting Thresholds:**
+- Worker failure rate > 5%
+- p99 latency > 1s
+- Memory growth > 500MB/hour
+- Connection pool exhaustion
+
+### Deployment Best Practices
+
+**Resource Limits:**
+```yaml
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi" 
+    cpu: "1000m"
+```
+
+**Restart Policies:**
+- Python worker restart on OOM or crash
+- Exponential backoff for failed restarts
+- Maximum 3 restart attempts per minute
+- Circuit breaker after 10 consecutive failures
+
+**Socket Management:**
+- Use `/tmp/sockets/` or shared volume in K8s
+- Set socket permissions 0660
+- Clean up sockets on graceful shutdown
+- Monitor socket file descriptors
+
 ## Production Checklist
 
 - [ ] Set appropriate worker count based on CPU cores
-- [ ] Configure health checks
+- [ ] Configure health checks and alerting
 - [ ] Set up monitoring (metrics exposed at `:9090/metrics`)
-- [ ] Configure restart policies
+- [ ] Configure restart policies and circuit breakers
 - [ ] Set resource limits (memory, CPU)
 - [ ] Handle worker failures gracefully
+- [ ] Test failover scenarios
+- [ ] Configure socket permissions and cleanup
+- [ ] Set up log aggregation for Python workers
+- [ ] Document runbook for common issues
 
 ## Documentation
 

@@ -28,7 +28,6 @@ classifiers = [
     "Operating System :: MacOS",
 ]
 keywords = ["pyproc", "worker", "go", "python", "ipc", "rpc", "unix-socket"]
-license = {text = "Apache-2.0"}
 dependencies = []
 
 [project.optional-dependencies]

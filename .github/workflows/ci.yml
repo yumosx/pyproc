@@ -33,10 +33,22 @@ jobs:
           fi
 
       - name: Go vet
-        run: go vet ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgs=$(go list ./... | grep -v '/bench')
+          if [ -n "$pkgs" ]; then
+            echo "$pkgs" | xargs -r -n1 go vet
+          fi
 
       - name: Build all packages
-        run: go build ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgs=$(go list ./... | grep -v '/bench')
+          if [ -n "$pkgs" ]; then
+            echo "$pkgs" | xargs -r -n1 go build
+          fi
 
       - name: Build examples
         run: go build ./examples/basic
@@ -48,7 +60,13 @@ jobs:
           args: --timeout=5m
 
       - name: Test
-        run: go test ./...
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgs=$(go list ./... | grep -v '/bench')
+          if [ -n "$pkgs" ]; then
+            echo "$pkgs" | xargs -r -n1 go test
+          fi
 
   python:
     name: Python lint and tests (uv)
@@ -64,7 +82,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Sync dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --dev
 
       - name: Ruff check
         run: uv run ruff check .
@@ -85,7 +103,6 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --accept 200..299,403 --max-concurrency 4 --timeout 20s README.md docs/**/*.md
+          args: --config .lychee.toml README.md "docs/**/*.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

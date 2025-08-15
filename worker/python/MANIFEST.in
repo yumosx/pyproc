@@ -1,5 +1,4 @@
 include README.md
-include LICENSE
 recursive-include pyproc_worker *.py
 global-exclude __pycache__
 global-exclude *.py[co]
