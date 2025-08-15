@@ -35,7 +35,7 @@ func BenchmarkSingleWorker(b *testing.B) {
 	if err := pool.Start(ctx); err != nil {
 		b.Fatalf("failed to start pool: %v", err)
 	}
-	defer pool.Shutdown(ctx)
+	defer func() { _ = pool.Shutdown(ctx) }()
 
 	// Wait for pool to be ready
 	time.Sleep(500 * time.Millisecond)
@@ -77,7 +77,7 @@ func BenchmarkPool(b *testing.B) {
 			if err := pool.Start(ctx); err != nil {
 				b.Fatalf("failed to start pool: %v", err)
 			}
-			defer pool.Shutdown(ctx)
+			defer func() { _ = pool.Shutdown(ctx) }()
 
 			// Wait for pool to be ready
 			time.Sleep(500 * time.Millisecond)
@@ -121,7 +121,7 @@ func BenchmarkPoolParallel(b *testing.B) {
 			if err := pool.Start(ctx); err != nil {
 				b.Fatalf("failed to start pool: %v", err)
 			}
-			defer pool.Shutdown(ctx)
+			defer func() { _ = pool.Shutdown(ctx) }()
 
 			// Wait for pool to be ready
 			time.Sleep(500 * time.Millisecond)
@@ -193,7 +193,7 @@ func BenchmarkPoolThroughput(b *testing.B) {
 			if err := pool.Start(ctx); err != nil {
 				b.Fatalf("failed to start pool: %v", err)
 			}
-			defer pool.Shutdown(ctx)
+			defer func() { _ = pool.Shutdown(ctx) }()
 
 			// Wait for pool to be ready
 			time.Sleep(500 * time.Millisecond)
@@ -259,7 +259,7 @@ func BenchmarkPoolLatency(b *testing.B) {
 	if err := pool.Start(ctx); err != nil {
 		b.Fatalf("failed to start pool: %v", err)
 	}
-	defer pool.Shutdown(ctx)
+	defer func() { _ = pool.Shutdown(ctx) }()
 
 	// Wait for pool to be ready
 	time.Sleep(500 * time.Millisecond)

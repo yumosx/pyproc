@@ -187,7 +187,7 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 		select {
 		case pw.connPool <- conn:
 		default:
-			conn.Close()
+			_ = conn.Close()
 		}
 	}()
 
@@ -205,14 +205,14 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 	}
 
 	if err := framer.WriteMessage(reqData); err != nil {
-		conn.Close() // Connection is bad, don't return to pool
+		_ = conn.Close() // Connection is bad, don't return to pool
 		return err
 	}
 
 	// Read response
 	respData, err := framer.ReadMessage()
 	if err != nil {
-		conn.Close() // Connection is bad, don't return to pool
+		_ = conn.Close() // Connection is bad, don't return to pool
 		return err
 	}
 

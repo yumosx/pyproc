@@ -284,7 +284,7 @@ func TestWorker_InvalidScript(t *testing.T) {
 	// Start should fail
 	err := worker.Start(ctx)
 	if err == nil {
-		worker.Stop()
+		_ = worker.Stop()
 		t.Fatal("Expected start to fail with invalid script")
 	}
 
