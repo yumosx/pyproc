@@ -130,7 +130,7 @@ func (p *Pool) Start(ctx context.Context) error {
 
 	// Give workers time to stabilize before health check
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Start health monitoring
 	healthCtx, cancel := context.WithCancel(context.Background())
 	p.healthCancel = cancel
