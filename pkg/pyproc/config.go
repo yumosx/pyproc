@@ -28,10 +28,10 @@ type PoolConfig struct {
 
 // RestartConfig defines restart policy
 type RestartConfig struct {
-	MaxAttempts     int           `mapstructure:"max_attempts"`
-	InitialBackoff  time.Duration `mapstructure:"initial_backoff"`
-	MaxBackoff      time.Duration `mapstructure:"max_backoff"`
-	Multiplier      float64       `mapstructure:"multiplier"`
+	MaxAttempts    int           `mapstructure:"max_attempts"`
+	InitialBackoff time.Duration `mapstructure:"initial_backoff"`
+	MaxBackoff     time.Duration `mapstructure:"max_backoff"`
+	Multiplier     float64       `mapstructure:"multiplier"`
 }
 
 // PythonConfig defines Python runtime settings
@@ -50,9 +50,9 @@ type SocketConfig struct {
 
 // ProtocolConfig defines protocol settings
 type ProtocolConfig struct {
-	MaxFrameSize       int           `mapstructure:"max_frame_size"`
-	RequestTimeout     time.Duration `mapstructure:"request_timeout"`
-	ConnectionTimeout  time.Duration `mapstructure:"connection_timeout"`
+	MaxFrameSize      int           `mapstructure:"max_frame_size"`
+	RequestTimeout    time.Duration `mapstructure:"request_timeout"`
+	ConnectionTimeout time.Duration `mapstructure:"connection_timeout"`
 }
 
 // LoggingConfig defines logging settings
@@ -72,10 +72,10 @@ type MetricsConfig struct {
 // LoadConfig loads configuration from file and environment
 func LoadConfig(configPath string) (*Config, error) {
 	v := viper.New()
-	
+
 	// Set defaults
 	setDefaults(v)
-	
+
 	// Set config file
 	if configPath != "" {
 		v.SetConfigFile(configPath)
@@ -86,11 +86,11 @@ func LoadConfig(configPath string) (*Config, error) {
 		v.AddConfigPath("./config")
 		v.AddConfigPath("/etc/pyproc")
 	}
-	
+
 	// Read environment variables
 	v.SetEnvPrefix("PYPROC")
 	v.AutomaticEnv()
-	
+
 	// Read config file
 	if err := v.ReadInConfig(); err != nil {
 		// It's ok if config file doesn't exist, we have defaults
@@ -98,13 +98,13 @@ func LoadConfig(configPath string) (*Config, error) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
-	
+
 	// Unmarshal config
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
-	
+
 	// Convert duration fields (viper reads them as seconds)
 	cfg.Pool.StartTimeout *= time.Second
 	cfg.Pool.HealthInterval *= time.Second
@@ -112,7 +112,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	cfg.Pool.Restart.MaxBackoff *= time.Millisecond
 	cfg.Protocol.RequestTimeout *= time.Second
 	cfg.Protocol.ConnectionTimeout *= time.Second
-	
+
 	return &cfg, nil
 }
 
@@ -126,29 +126,29 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("pool.restart.initial_backoff", 1000)
 	v.SetDefault("pool.restart.max_backoff", 30000)
 	v.SetDefault("pool.restart.multiplier", 2.0)
-	
+
 	// Python defaults
 	v.SetDefault("python.executable", "python3")
 	v.SetDefault("python.worker_script", "./worker.py")
 	v.SetDefault("python.env", map[string]string{
 		"PYTHONUNBUFFERED": "1",
 	})
-	
+
 	// Socket defaults
 	v.SetDefault("socket.dir", "/tmp")
 	v.SetDefault("socket.prefix", "pyproc")
 	v.SetDefault("socket.permissions", 0600)
-	
+
 	// Protocol defaults
 	v.SetDefault("protocol.max_frame_size", 10485760) // 10MB
 	v.SetDefault("protocol.request_timeout", 60)
 	v.SetDefault("protocol.connection_timeout", 5)
-	
+
 	// Logging defaults
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("logging.trace_enabled", true)
-	
+
 	// Metrics defaults
 	v.SetDefault("metrics.enabled", true)
 	v.SetDefault("metrics.endpoint", ":9090")

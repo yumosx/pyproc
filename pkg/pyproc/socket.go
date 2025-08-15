@@ -50,7 +50,7 @@ func (sm *SocketManager) CleanupSocket(socketPath string) error {
 // CleanupAllSockets removes all socket files matching the prefix
 func (sm *SocketManager) CleanupAllSockets() error {
 	pattern := filepath.Join(sm.dir, fmt.Sprintf("%s-*.sock", sm.prefix))
-	
+
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("failed to glob socket files: %w", err)

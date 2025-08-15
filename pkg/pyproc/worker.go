@@ -36,13 +36,13 @@ type Worker struct {
 	cfg    WorkerConfig
 	logger *Logger
 
-	cmd     *exec.Cmd
-	cmdMu   sync.RWMutex
-	state   atomic.Int32
-	pid     atomic.Int32
-	
-	stopCh  chan struct{}
-	doneCh  chan struct{}
+	cmd   *exec.Cmd
+	cmdMu sync.RWMutex
+	state atomic.Int32
+	pid   atomic.Int32
+
+	stopCh chan struct{}
+	doneCh chan struct{}
 }
 
 // NewWorker creates a new worker instance
@@ -50,7 +50,7 @@ func NewWorker(cfg WorkerConfig, logger *Logger) *Worker {
 	if logger == nil {
 		logger = NewLogger(LoggingConfig{Level: "info", Format: "text"})
 	}
-	
+
 	return &Worker{
 		cfg:    cfg,
 		logger: logger.WithWorker(cfg.ID),
@@ -77,14 +77,13 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	// Create the command
 	cmd := exec.CommandContext(ctx, w.cfg.PythonExec, w.cfg.WorkerScript)
-	
+
 	// Set environment variables
 	cmd.Env = os.Environ()
 	for k, v := range w.cfg.Env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PYPROC_SOCKET_PATH=%s", w.cfg.SocketPath))
-	
 
 	// Capture output for debugging
 	cmd.Stdout = os.Stdout
@@ -99,7 +98,7 @@ func (w *Worker) Start(ctx context.Context) error {
 	w.cmdMu.Lock()
 	w.cmd = cmd
 	w.cmdMu.Unlock()
-	
+
 	w.pid.Store(int32(cmd.Process.Pid))
 	w.logger.InfoContext(ctx, "Worker process started", "pid", cmd.Process.Pid)
 
@@ -108,7 +107,7 @@ func (w *Worker) Start(ctx context.Context) error {
 	go func() {
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		
+
 		timeout := time.After(w.cfg.StartTimeout)
 		for {
 			select {
@@ -141,7 +140,7 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	w.state.Store(int32(WorkerStateRunning))
 	w.logger.InfoContext(ctx, "Worker ready")
-	
+
 	return nil
 }
 
@@ -200,26 +199,26 @@ func (w *Worker) Stop() error {
 	w.state.Store(int32(WorkerStateStopped))
 	w.pid.Store(0)
 	w.logger.Info("Worker stopped")
-	
+
 	return nil
 }
 
 // Restart restarts the worker process
 func (w *Worker) Restart(ctx context.Context) error {
 	w.logger.InfoContext(ctx, "Restarting worker")
-	
+
 	if err := w.Stop(); err != nil {
 		return fmt.Errorf("failed to stop worker: %w", err)
 	}
-	
+
 	// Reset channels
 	w.stopCh = make(chan struct{})
 	w.doneCh = make(chan struct{})
-	
+
 	if err := w.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start worker: %w", err)
 	}
-	
+
 	return nil
 }
 

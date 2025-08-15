@@ -21,8 +21,8 @@ func main() {
 		TraceEnabled: true,
 	})
 
-	// Get the worker script path
-	workerScript, err := filepath.Abs("worker.py")
+	// Get the worker script path relative to the repo root
+	workerScript, err := filepath.Abs(filepath.Join("examples", "basic", "worker.py"))
 	if err != nil {
 		log.Fatal(err)
 	}

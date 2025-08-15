@@ -22,18 +22,18 @@ type Logger struct {
 // NewLogger creates a new logger with the specified configuration
 func NewLogger(cfg LoggingConfig) *Logger {
 	var handler slog.Handler
-	
+
 	opts := &slog.HandlerOptions{
 		Level: parseLogLevel(cfg.Level),
 	}
-	
+
 	switch cfg.Format {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	default:
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	
+
 	return &Logger{
 		Logger:       slog.New(handler),
 		traceEnabled: cfg.TraceEnabled,

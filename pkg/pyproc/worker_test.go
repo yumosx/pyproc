@@ -39,7 +39,7 @@ if __name__ == "__main__":
 	// Get project root and set PYTHONPATH
 	projectRoot, _ := filepath.Abs("../..")
 	pythonPath := filepath.Join(projectRoot, "worker", "python")
-	
+
 	// Create worker configuration
 	cfg := WorkerConfig{
 		ID:           "test-worker",
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 	defer cancel()
 
 	worker := NewWorker(cfg, nil)
-	
+
 	if err := worker.Start(ctx); err != nil {
 		t.Fatalf("Failed to start worker: %v", err)
 	}
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 	// Get project root and set PYTHONPATH
 	projectRoot, _ := filepath.Abs("../..")
 	pythonPath := filepath.Join(projectRoot, "worker", "python")
-	
+
 	cfg := WorkerConfig{
 		ID:           "test-worker",
 		SocketPath:   socketPath,
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
 	ctx := context.Background()
 	worker := NewWorker(cfg, nil)
-	
+
 	if err := worker.Start(ctx); err != nil {
 		t.Fatalf("Failed to start worker: %v", err)
 	}
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 	// Get project root and set PYTHONPATH
 	projectRoot, _ := filepath.Abs("../..")
 	pythonPath := filepath.Join(projectRoot, "worker", "python")
-	
+
 	cfg := WorkerConfig{
 		ID:           "test-worker",
 		SocketPath:   socketPath,
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
 	ctx := context.Background()
 	worker := NewWorker(cfg, nil)
-	
+
 	// Start worker
 	if err := worker.Start(ctx); err != nil {
 		t.Fatalf("Failed to start worker: %v", err)
@@ -241,7 +241,7 @@ run_worker("` + socketPath + `")
 	// Get project root and set PYTHONPATH
 	projectRoot, _ := filepath.Abs("../..")
 	pythonPath := filepath.Join(projectRoot, "worker", "python")
-	
+
 	cfg := WorkerConfig{
 		ID:           "slow-worker",
 		SocketPath:   socketPath,
@@ -255,7 +255,7 @@ run_worker("` + socketPath + `")
 
 	ctx := context.Background()
 	worker := NewWorker(cfg, nil)
-	
+
 	// Start should timeout
 	err := worker.Start(ctx)
 	if err == nil {
@@ -280,7 +280,7 @@ func TestWorker_InvalidScript(t *testing.T) {
 
 	ctx := context.Background()
 	worker := NewWorker(cfg, nil)
-	
+
 	// Start should fail
 	err := worker.Start(ctx)
 	if err == nil {

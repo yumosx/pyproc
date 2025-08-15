@@ -109,6 +109,44 @@ def compute_stats(req):
         'sum': sum(numbers)
     }
 
+@expose
+def echo_worker_id(req):
+    """
+    Echo back the request with worker ID for testing round-robin.
+    
+    Args:
+        req: Dict with any content
+    
+    Returns:
+        Dict with echo and worker_id placeholder
+    """
+    import time
+    return {
+        'echo': req,
+        'timestamp': time.time()
+    }
+
+@expose
+def slow_process(req):
+    """
+    Simulate a slow process for testing backpressure.
+    
+    Args:
+        req: Dict with 'value' and optional 'sleep' duration
+    
+    Returns:
+        Dict with processed value
+    """
+    import time
+    sleep_duration = req.get('sleep', 0.1)
+    time.sleep(sleep_duration)
+    
+    value = req.get('value', 0)
+    return {
+        'result': value * 2,
+        'duration': sleep_duration
+    }
+
 if __name__ == '__main__':
     # Run the worker
     # Socket path can be provided as command line argument or environment variable

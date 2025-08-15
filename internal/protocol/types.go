@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -26,7 +27,7 @@ func NewRequest(id uint64, method string, body interface{}) (*Request, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request body: %w", err)
 	}
-	
+
 	return &Request{
 		ID:     id,
 		Method: method,
@@ -40,7 +41,7 @@ func NewResponse(id uint64, body interface{}) (*Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal response body: %w", err)
 	}
-	
+
 	return &Response{
 		ID:   id,
 		OK:   true,
@@ -98,5 +99,5 @@ func (r *Response) Error() error {
 	if r.ErrorMsg == "" {
 		return fmt.Errorf("unknown error")
 	}
-	return fmt.Errorf(r.ErrorMsg)
+	return errors.New(r.ErrorMsg)
 }
