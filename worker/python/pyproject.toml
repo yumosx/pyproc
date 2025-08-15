@@ -60,6 +60,9 @@ target-version = "py37"
 select = ["E", "F", "W", "I", "N", "B", "UP"]
 ignore = ["E501"]  # Line too long
 
+[tool.ruff.lint.isort]
+known-first-party = ["pyproc_worker"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
