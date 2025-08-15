@@ -119,7 +119,7 @@ func (w *Worker) Start(ctx context.Context) error {
 				// Try to connect to the socket
 				conn, err := net.Dial("unix", w.cfg.SocketPath)
 				if err == nil {
-					conn.Close()
+					_ = conn.Close()
 					socketReady <- nil
 					return
 				}

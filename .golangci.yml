@@ -9,6 +9,7 @@ linters:
     - goimports
     - revive
     - misspell
+    - errcheck
 
 issues:
   exclude-use-default: false

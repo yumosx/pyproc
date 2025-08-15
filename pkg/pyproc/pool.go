@@ -256,7 +256,7 @@ func (p *Pool) Shutdown(_ context.Context) error {
 	for _, pw := range p.workers {
 		close(pw.connPool)
 		for conn := range pw.connPool {
-			conn.Close()
+			_ = conn.Close()
 		}
 	}
 
@@ -299,7 +299,7 @@ func (w *Worker) IsHealthy(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	_ = conn.Close()
 	return true
 }
 
