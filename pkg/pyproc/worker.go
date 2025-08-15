@@ -222,7 +222,7 @@ func (w *Worker) wait() error {
 	w.cmdMu.RLock()
 	cmd := w.cmd
 	w.cmdMu.RUnlock()
-	
+
 	if cmd != nil {
 		w.waitOnce.Do(func() {
 			err := cmd.Wait()
@@ -231,7 +231,7 @@ func (w *Worker) wait() error {
 			w.cmdMu.Unlock()
 		})
 	}
-	
+
 	w.cmdMu.RLock()
 	err := w.waitErr
 	w.cmdMu.RUnlock()
