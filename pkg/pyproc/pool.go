@@ -292,7 +292,7 @@ func (p *Pool) Health() HealthStatus {
 }
 
 // IsHealthy checks if a worker is healthy
-func (w *Worker) IsHealthy(ctx context.Context) bool {
+func (w *Worker) IsHealthy(_ context.Context) bool {
 	// Check if process is running
 	if w.state.Load() != int32(WorkerStateRunning) {
 		return false
