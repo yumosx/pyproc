@@ -40,10 +40,12 @@ type Worker struct {
 	cfg    WorkerConfig
 	logger *Logger
 
-	cmd   *exec.Cmd
-	cmdMu sync.RWMutex
-	state atomic.Int32
-	pid   atomic.Int32
+	cmd      *exec.Cmd
+	cmdMu    sync.RWMutex
+	waitOnce sync.Once
+	waitErr  error
+	state    atomic.Int32
+	pid      atomic.Int32
 
 	stopCh chan struct{}
 	doneCh chan struct{}
@@ -72,6 +74,12 @@ func (w *Worker) Start(ctx context.Context) error {
 	w.logger.InfoContext(ctx, "Starting worker",
 		"socket_path", w.cfg.SocketPath,
 		"script", w.cfg.WorkerScript)
+
+	// Reset wait-related fields for new process
+	w.cmdMu.Lock()
+	w.waitOnce = sync.Once{}
+	w.waitErr = nil
+	w.cmdMu.Unlock()
 
 	// Clean up any existing socket file
 	if err := os.Remove(w.cfg.SocketPath); err != nil && !os.IsNotExist(err) {
@@ -178,7 +186,7 @@ func (w *Worker) Stop() error {
 		// Wait for process to exit with timeout
 		done := make(chan error, 1)
 		go func() {
-			done <- cmd.Wait()
+			done <- w.wait()
 		}()
 
 		select {
@@ -209,6 +217,27 @@ func (w *Worker) Stop() error {
 	return nil
 }
 
+// wait wraps cmd.Wait() to ensure it's called only once
+func (w *Worker) wait() error {
+	w.cmdMu.RLock()
+	cmd := w.cmd
+	w.cmdMu.RUnlock()
+	
+	if cmd != nil {
+		w.waitOnce.Do(func() {
+			err := cmd.Wait()
+			w.cmdMu.Lock()
+			w.waitErr = err
+			w.cmdMu.Unlock()
+		})
+	}
+	
+	w.cmdMu.RLock()
+	err := w.waitErr
+	w.cmdMu.RUnlock()
+	return err
+}
+
 // Restart restarts the worker process
 func (w *Worker) Restart(ctx context.Context) error {
 	w.logger.InfoContext(ctx, "Restarting worker")
@@ -217,7 +246,9 @@ func (w *Worker) Restart(ctx context.Context) error {
 		return fmt.Errorf("failed to stop worker: %w", err)
 	}
 
-	// Reset channels
+	// Reset channels for new process
+	// Note: We don't reset waitOnce here as it can cause race conditions
+	// Each new process will get its own waitOnce via Start()
 	w.stopCh = make(chan struct{})
 	w.doneCh = make(chan struct{})
 
@@ -243,7 +274,7 @@ func (w *Worker) monitor() {
 	// Wait for either stop signal or process exit
 	waitCh := make(chan error, 1)
 	go func() {
-		waitCh <- cmd.Wait()
+		waitCh <- w.wait()
 	}()
 
 	select {

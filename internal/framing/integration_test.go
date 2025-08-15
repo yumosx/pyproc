@@ -326,9 +326,20 @@ if __name__ == "__main__":
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	conn, err := net.Dial("unix", socketPath)
+	// Retry connection to handle timing issues in CI
+	var conn net.Conn
+	var err error
+	for retry := 0; retry < 10; retry++ {
+		conn, err = net.Dial("unix", socketPath)
+		if err == nil {
+			break
+		}
+		if retry < 9 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 	if err != nil {
-		t.Fatalf("Failed to connect to worker: %v", err)
+		t.Fatalf("Failed to connect to worker after retries: %v", err)
 	}
 	defer func() { _ = conn.Close() }()
 
