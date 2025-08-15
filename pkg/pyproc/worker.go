@@ -15,9 +15,13 @@ import (
 type WorkerState int32
 
 const (
+	// WorkerStateStopped indicates the worker is not running
 	WorkerStateStopped WorkerState = iota
+	// WorkerStateStarting indicates the worker is in the process of starting
 	WorkerStateStarting
+	// WorkerStateRunning indicates the worker is running and ready to accept requests
 	WorkerStateRunning
+	// WorkerStateStopping indicates the worker is in the process of stopping
 	WorkerStateStopping
 )
 
@@ -134,7 +138,9 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	// Wait for socket to be ready
 	if err := <-socketReady; err != nil {
-		w.Stop()
+		if err := w.Stop(); err != nil {
+			w.logger.Error("failed to stop worker after socket error", "error", err)
+		}
 		return err
 	}
 

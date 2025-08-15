@@ -61,7 +61,7 @@ if __name__ == "__main__":
 	if err := worker.Start(ctx); err != nil {
 		t.Fatalf("Failed to start worker: %v", err)
 	}
-	defer worker.Stop()
+	defer func() { _ = worker.Stop() }()
 
 	// Verify the socket exists
 	if _, err := os.Stat(socketPath); err != nil {
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 	if err := worker.Start(ctx); err != nil {
 		t.Fatalf("Failed to start worker: %v", err)
 	}
-	defer worker.Stop()
+	defer func() { _ = worker.Stop() }()
 
 	// Get initial PID
 	initialPID := worker.GetPID()
@@ -259,7 +259,7 @@ run_worker("` + socketPath + `")
 	// Start should timeout
 	err := worker.Start(ctx)
 	if err == nil {
-		worker.Stop()
+		_ = worker.Stop()
 		t.Fatal("Expected start to timeout")
 	}
 

@@ -178,7 +178,7 @@ func TestFramer_PartialRead(t *testing.T) {
 
 	var fullBuf bytes.Buffer
 	framer := NewFramer(&fullBuf)
-	framer.WriteMessage(data)
+	_ = framer.WriteMessage(data)
 
 	// Simulate partial read by creating a reader that returns data in chunks
 	fullData := fullBuf.Bytes()
@@ -224,6 +224,6 @@ func (r *partialReader) Read(p []byte) (n int, err error) {
 	return toRead, nil
 }
 
-func (r *partialReader) Write(p []byte) (n int, err error) {
+func (r *partialReader) Write(_ []byte) (n int, err error) {
 	return 0, io.ErrClosedPipe
 }

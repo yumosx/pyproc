@@ -1,3 +1,5 @@
+// Package protocol defines the message types and communication protocol
+// for pyproc worker communication over Unix Domain Sockets.
 package protocol
 
 import (

@@ -1,3 +1,5 @@
+// Package framing implements the 4-byte length prefixed framing protocol
+// for reliable message transmission over Unix Domain Sockets.
 package framing
 
 import (

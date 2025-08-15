@@ -25,7 +25,7 @@ func TestNewPool(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	if pool == nil {
 		t.Fatal("pool is nil")
@@ -54,7 +54,7 @@ func TestPoolStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	ctx := context.Background()
 	if err := pool.Start(ctx); err != nil {
@@ -88,7 +88,7 @@ func TestPoolCall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	ctx := context.Background()
 	if err := pool.Start(ctx); err != nil {
@@ -131,7 +131,7 @@ func TestPoolRoundRobin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	ctx := context.Background()
 	if err := pool.Start(ctx); err != nil {
@@ -200,7 +200,7 @@ func TestPoolBackpressure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	ctx := context.Background()
 	if err := pool.Start(ctx); err != nil {
@@ -299,7 +299,7 @@ func TestPoolHealthCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPool failed: %v", err)
 	}
-	defer pool.Shutdown(context.Background())
+	defer func() { _ = pool.Shutdown(context.Background()) }()
 
 	ctx := context.Background()
 	if err := pool.Start(ctx); err != nil {

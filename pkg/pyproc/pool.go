@@ -120,7 +120,9 @@ func (p *Pool) Start(ctx context.Context) error {
 			select {
 			case pw.connPool <- conn:
 			default:
-				conn.Close()
+				if err := conn.Close(); err != nil {
+					p.logger.Error("failed to close connection", "error", err)
+				}
 			}
 		}
 	}
@@ -238,7 +240,7 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 }
 
 // Shutdown gracefully shuts down all workers
-func (p *Pool) Shutdown(ctx context.Context) error {
+func (p *Pool) Shutdown(_ context.Context) error {
 	if !p.shutdown.CompareAndSwap(false, true) {
 		return nil // Already shutting down
 	}

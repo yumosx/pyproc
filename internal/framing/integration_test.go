@@ -74,8 +74,8 @@ if __name__ == "__main__":
 		t.Fatalf("Failed to start Python worker: %v", err)
 	}
 	defer func() {
-		cmd.Process.Kill()
-		cmd.Wait()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
 	}()
 
 	// Wait for the socket to be available
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 	if err != nil {
 		t.Fatalf("Failed to connect to worker: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	framer := framing.NewFramer(conn)
 
@@ -312,8 +312,8 @@ if __name__ == "__main__":
 		t.Fatalf("Failed to start Python worker: %v", err)
 	}
 	defer func() {
-		cmd.Process.Kill()
-		cmd.Wait()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
 	}()
 
 	// Wait for socket
@@ -328,7 +328,7 @@ if __name__ == "__main__":
 	if err != nil {
 		t.Fatalf("Failed to connect to worker: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	framer := framing.NewFramer(conn)
 

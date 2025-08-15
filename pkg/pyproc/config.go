@@ -1,3 +1,5 @@
+// Package pyproc provides a Go library for calling Python functions
+// without CGO, using Unix Domain Sockets for high-performance IPC.
 package pyproc
 
 import (

@@ -65,7 +65,7 @@ pyproc is **NOT** designed for:
 |-----------|-------------|
 | **Operating System** | Linux, macOS (Unix Domain Sockets required) |
 | **Go Version** | 1.22+ |
-| **Python Version** | 3.8+ |
+| **Python Version** | 3.9+ (3.12 recommended) |
 | **Deployment** | Same host/pod only |
 | **Container Runtime** | Docker, containerd, any OCI-compatible |
 | **Orchestration** | Kubernetes (same-pod), Docker Compose, systemd |
