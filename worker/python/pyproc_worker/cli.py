@@ -3,10 +3,10 @@
 Command-line interface for pyproc-worker
 """
 
-import sys
 import argparse
+import importlib.util
 import logging
-from . import run_worker
+import sys
 
 def main():
     """Main entry point for CLI"""
@@ -28,17 +28,16 @@ def main():
         choices=['debug', 'info', 'warning', 'error'],
         default='info'
     )
-    
+
     args = parser.parse_args()
-    
+
     # Set up logging
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper()),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
+
     # Import and run the worker script
-    import importlib.util
     spec = importlib.util.spec_from_file_location("worker", args.worker_script)
     if spec and spec.loader:
         worker_module = importlib.util.module_from_spec(spec)
