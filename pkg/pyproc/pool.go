@@ -108,7 +108,8 @@ func (p *Pool) Start(ctx context.Context) error {
 			}
 			return fmt.Errorf("failed to start worker %d: %w", i, err)
 		}
-		pw.healthy.Store(true)
+		// Don't mark as healthy until first health check succeeds
+		// pw.healthy.Store(true) - removed, will be set by health check
 
 		// Pre-populate connection pool
 		for j := 0; j < p.opts.Config.MaxInFlight; j++ {
@@ -127,12 +128,16 @@ func (p *Pool) Start(ctx context.Context) error {
 		}
 	}
 
+	// Give workers time to stabilize before health check
+	time.Sleep(100 * time.Millisecond)
+	
 	// Start health monitoring
 	healthCtx, cancel := context.WithCancel(context.Background())
 	p.healthCancel = cancel
 	p.wg.Add(1)
 	go p.healthMonitor(healthCtx)
 
+	// Initial health check
 	p.updateHealthStatus()
 	p.logger.Info("worker pool started successfully")
 	return nil

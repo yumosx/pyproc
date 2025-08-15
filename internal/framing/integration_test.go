@@ -305,8 +305,16 @@ if __name__ == "__main__":
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	// Get the project root
+	projectRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatalf("Failed to get project root: %v", err)
+	}
+
 	cmd := exec.CommandContext(ctx, "python3", workerScript)
-	cmd.Env = append(os.Environ(), "PYTHONPATH="+filepath.Join(tmpDir, "../../worker/python"))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "PYTHONPATH="+filepath.Join(projectRoot, "worker/python"))
 
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start Python worker: %v", err)
@@ -328,7 +336,6 @@ if __name__ == "__main__":
 
 	// Retry connection to handle timing issues in CI
 	var conn net.Conn
-	var err error
 	for retry := 0; retry < 10; retry++ {
 		conn, err = net.Dial("unix", socketPath)
 		if err == nil {
