@@ -6,4 +6,3 @@ def test_health_returns_fields():
     assert isinstance(resp, dict)
     assert resp.get("status") == "healthy"
     assert "pid" in resp
-

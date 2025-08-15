@@ -17,8 +17,8 @@ from typing import Any, Callable, Dict, Optional
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stderr
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stderr,
 )
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class FramedConnection:
             return None
 
         # Parse length (big-endian)
-        length = struct.unpack('>I', length_bytes)[0]
+        length = struct.unpack(">I", length_bytes)[0]
 
         # Read message body
         message = self._read_exact(length)
@@ -67,14 +67,14 @@ class FramedConnection:
         """Write a framed message to the socket."""
         # Write 4-byte length header (big-endian)
         length = len(data)
-        self.conn.sendall(struct.pack('>I', length))
+        self.conn.sendall(struct.pack(">I", length))
 
         # Write message body
         self.conn.sendall(data)
 
     def _read_exact(self, n: int) -> Optional[bytes]:
         """Read exactly n bytes from the socket."""
-        data = b''
+        data = b""
         while len(data) < n:
             chunk = self.conn.recv(n - len(data))
             if not chunk:
@@ -135,26 +135,22 @@ class Worker:
                     break
 
                 # Parse request
-                request = json.loads(message.decode('utf-8'))
+                request = json.loads(message.decode("utf-8"))
                 logger.debug(f"Received request: {request}")
 
                 # Process request
                 response = self._process_request(request)
 
                 # Send response
-                response_bytes = json.dumps(response).encode('utf-8')
+                response_bytes = json.dumps(response).encode("utf-8")
                 self.framed_conn.write_message(response_bytes)
 
             except Exception as e:
                 logger.error(f"Error handling request: {e}")
                 # Try to send error response
                 try:
-                    error_response = {
-                        "id": 0,
-                        "ok": False,
-                        "error": str(e)
-                    }
-                    response_bytes = json.dumps(error_response).encode('utf-8')
+                    error_response = {"id": 0, "ok": False, "error": str(e)}
+                    response_bytes = json.dumps(error_response).encode("utf-8")
                     self.framed_conn.write_message(response_bytes)
                 except Exception:  # noqa: S110
                     pass
@@ -168,32 +164,20 @@ class Worker:
 
         # Check if method is exposed
         if method not in _exposed_functions:
-            return {
-                "id": req_id,
-                "ok": False,
-                "error": f"Method '{method}' not found"
-            }
+            return {"id": req_id, "ok": False, "error": f"Method '{method}' not found"}
 
         try:
             # Call the exposed function
             func = _exposed_functions[method]
             result = func(body)
 
-            return {
-                "id": req_id,
-                "ok": True,
-                "body": result
-            }
+            return {"id": req_id, "ok": True, "body": result}
         except Exception as e:
             # Capture the full traceback for debugging
             tb = traceback.format_exc()
             logger.error(f"Error in method '{method}': {tb}")
 
-            return {
-                "id": req_id,
-                "ok": False,
-                "error": str(e)
-            }
+            return {"id": req_id, "ok": False, "error": str(e)}
 
 
 def run_worker(socket_path: Optional[str] = None):

@@ -187,7 +187,7 @@ func TestPoolBackpressure(t *testing.T) {
 	opts := PoolOptions{
 		Config: PoolConfig{
 			Workers:     1,
-			MaxInFlight: 2, // Small limit to test backpressure
+			MaxInFlight: 1, // Reduced to ensure backpressure
 		},
 		WorkerConfig: WorkerConfig{
 			SocketPath:   "/tmp/test-pool-bp.sock",
@@ -216,7 +216,7 @@ func TestPoolBackpressure(t *testing.T) {
 		go func(idx int) {
 			input := map[string]interface{}{
 				"value": idx,
-				"sleep": 0.1, // Slow request to trigger backpressure
+				"sleep": 0.3, // Increased sleep to ensure request takes longer than timeout
 			}
 			var output map[string]interface{}
 

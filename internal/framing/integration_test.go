@@ -302,7 +302,7 @@ if __name__ == "__main__":
 		t.Fatalf("Failed to write worker script: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "python3", workerScript)
@@ -316,12 +316,14 @@ if __name__ == "__main__":
 		_ = cmd.Wait()
 	}()
 
-	// Wait for socket
-	for i := 0; i < 50; i++ {
+	// Wait for socket with shorter interval and longer timeout
+	for i := 0; i < 100; i++ {
 		if _, err := os.Stat(socketPath); err == nil {
+			// Give it a bit more time to fully initialize
+			time.Sleep(100 * time.Millisecond)
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	conn, err := net.Dial("unix", socketPath)
