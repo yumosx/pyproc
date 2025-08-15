@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           pkgs=$(go list ./... | grep -v '/bench')
           if [ -n "$pkgs" ]; then
-            echo "$pkgs" | xargs -r -n1 go test
+            echo "$pkgs" | xargs -r -n1 go test -timeout 5m -v -race
           fi
 
   python:
