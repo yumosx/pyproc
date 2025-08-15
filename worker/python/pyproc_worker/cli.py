@@ -2,7 +2,7 @@
 """
 Command-line interface for pyproc-worker
 """
-
+# ruff: noqa: I001
 import argparse
 import importlib.util
 import logging
