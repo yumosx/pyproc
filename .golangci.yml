@@ -1,5 +1,3 @@
-version: "1.21"
-
 run:
   timeout: 5m
 
