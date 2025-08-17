@@ -82,6 +82,38 @@ go tool pprof cpu.prof
 go tool pprof mem.prof
 ```
 
+## RPC Protocol Comparison
+
+### Overview
+Additional benchmarks comparing pyproc's native protocol against standard RPC protocols (JSON-RPC, XML-RPC, MessagePack-RPC) over Unix Domain Sockets.
+
+### Running RPC Comparison
+```bash
+# Quick comparison
+make bench-comparison
+
+# Detailed report with results saved to file
+make bench-comparison-report
+
+# Manual run
+go test -bench=BenchmarkRPC -benchtime=100x ./bench
+```
+
+### Protocol Performance Comparison
+
+| Protocol | Protocol Overhead | Expected Latency (p50) | 
+|----------|------------------|----------------------|
+| pyproc   | 4 bytes          | ~45μs                |
+| JSON-RPC | ~50 bytes        | ~100μs               |
+| XML-RPC  | ~100 bytes       | ~150μs               |
+| MsgPack  | ~20 bytes        | ~80μs                |
+
+### Key Advantages of pyproc
+
+1. **Minimal Protocol Overhead**: Only 4-byte length header vs full RPC metadata
+2. **No RPC Parsing**: Direct JSON payload without RPC envelope
+3. **Optimized for UDS**: Designed specifically for local IPC
+
 ## Contributing
 
 When adding new benchmarks:
