@@ -193,4 +193,3 @@ func generateFromTemplate(tmplPath, outPath string, data interface{}) error {
 	fmt.Printf("Generated: %s\n", outPath)
 	return nil
 }
-
