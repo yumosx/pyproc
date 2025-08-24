@@ -101,7 +101,7 @@ func (h *HMACAuth) AuthenticateServer(conn net.Conn) error {
 
 	if !hmac.Equal(response, expected) {
 		// Authentication failed
-		_ = conn.Write([]byte{0})
+		_, _ = conn.Write([]byte{0})
 		return fmt.Errorf("HMAC verification failed")
 	}
 
