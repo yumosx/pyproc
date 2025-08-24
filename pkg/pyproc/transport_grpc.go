@@ -82,11 +82,9 @@ func (t *GRPCTransport) connect() error {
 		return fmt.Errorf("unsupported gRPC transport type: %s", t.config.Type)
 	}
 
-	// Connect with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, target, opts...)
+	// grpc.NewClient doesn't use context for initial connection
+	// The connection is established lazily on first RPC
+	conn, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", target, err)
 	}

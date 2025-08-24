@@ -4,7 +4,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -195,31 +194,3 @@ func generateFromTemplate(tmplPath, outPath string, data interface{}) error {
 	return nil
 }
 
-// Helper function to copy embedded file
-func copyEmbeddedFile(src, dst string) error {
-	srcFile, err := templates.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = srcFile.Close() }()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = dstFile.Close() }()
-
-	_, err = io.Copy(dstFile, srcFile)
-	return err
-}
-
-// Helper function to sanitize project names
-func sanitizeName(name string) string {
-	// Replace non-alphanumeric characters with underscores
-	return strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
-			return r
-		}
-		return '_'
-	}, name)
-}

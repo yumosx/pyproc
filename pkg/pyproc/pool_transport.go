@@ -254,7 +254,7 @@ func (p *PoolWithTransport) Call(ctx context.Context, method string, input inter
 }
 
 // Shutdown gracefully shuts down the pool
-func (p *PoolWithTransport) Shutdown(ctx context.Context) error {
+func (p *PoolWithTransport) Shutdown(_ context.Context) error {
 	if !p.shutdown.CompareAndSwap(false, true) {
 		return nil // Already shutting down
 	}
