@@ -196,4 +196,3 @@ func (p *PoolWithMetrics) GetMetrics() MetricsSnapshot {
 func (p *PoolWithMetrics) ResetMetrics() {
 	p.metrics = NewPoolMetrics()
 }
-

@@ -222,4 +222,3 @@ func sanitizeName(name string) string {
 		return '_'
 	}, name)
 }
-

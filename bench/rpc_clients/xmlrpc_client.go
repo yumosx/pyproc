@@ -175,4 +175,3 @@ func (c *XMLRPCClient) Close() error {
 func (c *XMLRPCClient) Name() string {
 	return "xml-rpc"
 }
-

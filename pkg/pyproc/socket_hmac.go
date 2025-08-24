@@ -183,4 +183,3 @@ func SecretFromString(s string) []byte {
 func SecretFromHex(hexStr string) ([]byte, error) {
 	return hex.DecodeString(hexStr)
 }
-

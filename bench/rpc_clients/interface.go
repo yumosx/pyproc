@@ -102,4 +102,3 @@ type BenchmarkResult struct {
 	CPUUsage    float64       // Average CPU usage percentage
 	MemoryUsage int64         // Memory usage in bytes
 }
-

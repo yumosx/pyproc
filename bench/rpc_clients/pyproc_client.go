@@ -78,4 +78,3 @@ func (c *PyprocClient) Close() error {
 func (c *PyprocClient) Name() string {
 	return "pyproc"
 }
-

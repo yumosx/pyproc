@@ -279,4 +279,3 @@ func calculatePercentile(latencies []time.Duration, percentile float64) time.Dur
 
 	return latencies[index]
 }
-

@@ -118,4 +118,3 @@ func (c *JSONRPCClient) Close() error {
 func (c *JSONRPCClient) Name() string {
 	return "json-rpc"
 }
-

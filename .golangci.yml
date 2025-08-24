@@ -1,0 +1,15 @@
+run:
+  timeout: 5m
+  skip-dirs:
+    - bench
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - revive
+    - misspell
+    - errcheck
+
+issues:
+  exclude-use-default: false
