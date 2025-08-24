@@ -95,7 +95,7 @@ func (l *Logger) WarnContext(ctx context.Context, msg string, args ...any) {
 // WithWorker returns a logger with worker ID attached
 func (l *Logger) WithWorker(workerID string) *Logger {
 	return &Logger{
-		Logger:       l.Logger.With("worker_id", workerID),
+		Logger:       l.With("worker_id", workerID),
 		traceEnabled: l.traceEnabled,
 	}
 }
@@ -103,7 +103,7 @@ func (l *Logger) WithWorker(workerID string) *Logger {
 // WithMethod returns a logger with method name attached
 func (l *Logger) WithMethod(method string) *Logger {
 	return &Logger{
-		Logger:       l.Logger.With("method", method),
+		Logger:       l.With("method", method),
 		traceEnabled: l.traceEnabled,
 	}
 }
