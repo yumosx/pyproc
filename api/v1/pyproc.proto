@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package pyproc.v1;
+
+option go_package = "github.com/YuminosukeSato/pyproc/api/v1;pyprocv1";
+
+// PyProcService defines the gRPC service for Python worker communication
+service PyProcService {
+  // Generic call for backward compatibility with existing JSON protocol
+  rpc Call(CallRequest) returns (CallResponse);
+  
+  // Health check RPC for worker health monitoring
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// CallRequest represents a generic method call request
+message CallRequest {
+  // Unique request ID for correlation
+  uint64 id = 1;
+  
+  // Method name to invoke on the worker
+  string method = 2;
+  
+  // JSON-encoded input data
+  bytes input = 3;
+}
+
+// CallResponse represents a generic method call response
+message CallResponse {
+  // Request ID for correlation
+  uint64 id = 1;
+  
+  // Success status
+  bool ok = 2;
+  
+  // JSON-encoded response body
+  bytes body = 3;
+  
+  // Error message if ok is false
+  string error_message = 4;
+  
+  // Error type for structured error handling
+  string error_type = 5;
+}
+
+// HealthCheckRequest for worker health monitoring
+message HealthCheckRequest {
+  // Empty for now, can be extended with specific health check parameters
+}
+
+// HealthCheckResponse contains worker health information
+message HealthCheckResponse {
+  // Overall health status
+  bool healthy = 1;
+  
+  // Worker uptime in seconds
+  int64 uptime_seconds = 2;
+  
+  // Additional metadata about the worker
+  map<string, string> metadata = 3;
+}

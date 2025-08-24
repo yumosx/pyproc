@@ -1,5 +1,7 @@
 run:
   timeout: 5m
+  skip-dirs:
+    - bench
 
 linters:
   enable:
@@ -11,5 +13,3 @@ linters:
 
 issues:
   exclude-use-default: false
-  exclude-dirs:
-    - bench

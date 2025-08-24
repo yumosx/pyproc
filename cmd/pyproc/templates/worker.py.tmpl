@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""
+{{.ProjectName}} Python Worker
+"""
+
+import sys
+import os
+import random
+
+# Add pyproc_worker to path (adjust path as needed)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
+
+from pyproc_worker import expose, run_worker
+
+@expose
+def predict(req):
+    """
+    Sample prediction function.
+    
+    Args:
+        req: Dict with 'text' key
+    
+    Returns:
+        Dict with prediction results
+    """
+    text = req.get('text', '')
+    
+    # Simulate some ML prediction logic
+    score = random.random()
+    confidence = random.uniform(0.7, 1.0)
+    labels = ['positive', 'negative', 'neutral']
+    label = random.choice(labels)
+    
+    return {
+        'score': score,
+        'confidence': confidence,
+        'label': label,
+        'text_length': len(text)
+    }
+
+@expose
+def process_batch(req):
+    """
+    Process a batch of items.
+    
+    Args:
+        req: Dict with 'items' list
+    
+    Returns:
+        Dict with processed results
+    """
+    items = req.get('items', [])
+    
+    results = []
+    for item in items:
+        # Process each item
+        result = {
+            'id': item.get('id'),
+            'processed': True,
+            'score': random.random()
+        }
+        results.append(result)
+    
+    return {
+        'results': results,
+        'total': len(results),
+        'success': True
+    }
+
+@expose
+def analyze(req):
+    """
+    Analyze input data.
+    
+    Args:
+        req: Dict with analysis parameters
+    
+    Returns:
+        Dict with analysis results
+    """
+    data = req.get('data', {})
+    options = req.get('options', {})
+    
+    # Perform analysis
+    analysis = {
+        'summary': f"Analyzed {len(data)} data points",
+        'metrics': {
+            'mean': random.uniform(0, 100),
+            'std': random.uniform(0, 20),
+            'min': random.uniform(0, 50),
+            'max': random.uniform(50, 100)
+        },
+        'recommendations': [
+            "Consider increasing sample size",
+            "Review outlier detection parameters"
+        ]
+    }
+    
+    return analysis
+
+if __name__ == '__main__':
+    # Run the worker
+    run_worker()

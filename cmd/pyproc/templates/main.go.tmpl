@@ -1,0 +1,82 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/YuminosukeSato/pyproc/pkg/pyproc"
+)
+
+// Request and response types
+type PredictRequest struct {
+	Text string `json:"text"`
+}
+
+type PredictResponse struct {
+	Score      float64 `json:"score"`
+	Confidence float64 `json:"confidence"`
+	Label      string  `json:"label"`
+}
+
+func main() {
+	// Create pool options
+	opts := pyproc.PoolOptions{
+		NumWorkers:    2,
+		PythonPath:    "python3",
+		WorkerScript:  "worker/python/worker.py",
+		SocketPrefix:  "/tmp/{{.ProjectName}}",
+		StartupTimeout: 10 * time.Second,
+		CallTimeout:   5 * time.Second,
+	}
+
+	// Create logger
+	logger := pyproc.NewLogger(pyproc.LogLevelInfo)
+
+	// Create pool
+	pool, err := pyproc.NewPool(opts, logger)
+	if err != nil {
+		log.Fatalf("Failed to create pool: %v", err)
+	}
+
+	// Start the pool
+	ctx := context.Background()
+	if err := pool.Start(ctx); err != nil {
+		log.Fatalf("Failed to start pool: %v", err)
+	}
+	defer pool.Stop()
+
+	// Handle graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	
+	go func() {
+		<-sigChan
+		fmt.Println("\nShutting down...")
+		pool.Stop()
+		os.Exit(0)
+	}()
+
+	// Example: Make a prediction
+	req := PredictRequest{
+		Text: "This is a sample text for prediction",
+	}
+	
+	var resp PredictResponse
+	if err := pool.Call(ctx, "predict", req, &resp); err != nil {
+		log.Printf("Prediction failed: %v", err)
+	} else {
+		fmt.Printf("Prediction result:\n")
+		fmt.Printf("  Score: %.2f\n", resp.Score)
+		fmt.Printf("  Confidence: %.2f%%\n", resp.Confidence*100)
+		fmt.Printf("  Label: %s\n", resp.Label)
+	}
+
+	// Keep the program running
+	fmt.Println("\nPress Ctrl+C to exit...")
+	select {}
+}

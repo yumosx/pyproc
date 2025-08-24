@@ -1,0 +1,48 @@
+.PHONY: all build run test clean install-deps
+
+# Variables
+BINARY_NAME=app
+GO_FILES=$(shell find . -name '*.go' -type f)
+PYTHON_FILES=$(shell find worker/python -name '*.py' -type f)
+
+all: build
+
+build:
+	go build -o bin/$(BINARY_NAME) cmd/app/main.go
+
+run:
+	go run cmd/app/main.go
+
+test:
+	go test ./... -v
+	cd worker/python && python -m pytest tests/ -v
+
+clean:
+	rm -rf bin/
+	find . -name "*.pyc" -delete
+	find . -name "__pycache__" -delete
+	rm -f /tmp/{{.ProjectName}}.sock*
+
+install-deps:
+	go mod download
+	pip install -r worker/python/requirements.txt
+
+fmt:
+	go fmt ./...
+	cd worker/python && ruff format .
+
+lint:
+	golangci-lint run
+	cd worker/python && ruff check .
+
+docker-build:
+	docker-compose build
+
+docker-up:
+	docker-compose up
+
+docker-down:
+	docker-compose down
+
+benchmark:
+	go test -bench=. -benchmem ./...

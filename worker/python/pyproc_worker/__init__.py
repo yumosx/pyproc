@@ -1,11 +1,9 @@
-"""
-pyproc_worker - Python worker for pyproc
+"""pyproc_worker - Python worker for pyproc
 
 This module implements the Python side of the pyproc protocol,
 allowing Python functions to be exposed and called from Go.
 """
 
-import json
 import logging
 import os
 import socket
@@ -13,6 +11,9 @@ import struct
 import sys
 import traceback
 from typing import Any, Callable, Dict, Optional
+
+from .codec import Codec, get_codec
+from .tracing import WorkerTracing, get_tracing, trace_method
 
 # Setup logging
 logging.basicConfig(
@@ -27,8 +28,7 @@ _exposed_functions: Dict[str, Callable] = {}
 
 
 def expose(func: Callable) -> Callable:
-    """
-    Decorator to expose a Python function to Go.
+    """Decorator to expose a Python function to Go.
 
     Usage:
         @expose
@@ -43,8 +43,9 @@ def expose(func: Callable) -> Callable:
 class FramedConnection:
     """Handles framed message communication over a socket."""
 
-    def __init__(self, conn: socket.socket):
+    def __init__(self, conn: socket.socket, codec: Optional[Codec] = None):
         self.conn = conn
+        self.codec = codec or get_codec("auto")
 
     def read_message(self) -> Optional[bytes]:
         """Read a framed message from the socket."""
@@ -86,10 +87,13 @@ class FramedConnection:
 class Worker:
     """Main worker class that handles requests from Go."""
 
-    def __init__(self, socket_path: str):
+    def __init__(self, socket_path: str, codec_type: str = "auto"):
         self.socket_path = socket_path
+        self.codec = get_codec(codec_type)
         self.conn = None
         self.framed_conn = None
+        self.tracing = get_tracing()
+        logger.info(f"Using codec: {self.codec.name}")
 
     def start(self):
         """Start the worker and listen for requests."""
@@ -109,7 +113,7 @@ class Worker:
                 # Accept connection
                 conn, _ = sock.accept()
                 self.conn = conn
-                self.framed_conn = FramedConnection(conn)
+                self.framed_conn = FramedConnection(conn, self.codec)
 
                 logger.info("Accepted connection")
 
@@ -135,14 +139,14 @@ class Worker:
                     break
 
                 # Parse request
-                request = json.loads(message.decode("utf-8"))
+                request = self.framed_conn.codec.decode(message)
                 logger.debug(f"Received request: {request}")
 
                 # Process request
                 response = self._process_request(request)
 
                 # Send response
-                response_bytes = json.dumps(response).encode("utf-8")
+                response_bytes = self.framed_conn.codec.encode(response)
                 self.framed_conn.write_message(response_bytes)
 
             except Exception as e:
@@ -150,7 +154,7 @@ class Worker:
                 # Try to send error response
                 try:
                     error_response = {"id": 0, "ok": False, "error": str(e)}
-                    response_bytes = json.dumps(error_response).encode("utf-8")
+                    response_bytes = self.framed_conn.codec.encode(error_response)
                     self.framed_conn.write_message(response_bytes)
                 except Exception:  # noqa: S110
                     pass
@@ -166,34 +170,52 @@ class Worker:
         if method not in _exposed_functions:
             return {"id": req_id, "ok": False, "error": f"Method '{method}' not found"}
 
-        try:
-            # Call the exposed function
-            func = _exposed_functions[method]
-            result = func(body)
+        # Create tracing context for this request
+        with self.tracing.trace_request(request) as span:
+            try:
+                # Call the exposed function
+                func = _exposed_functions[method]
+                result = func(body)
 
-            return {"id": req_id, "ok": True, "body": result}
-        except Exception as e:
-            # Capture the full traceback for debugging
-            tb = traceback.format_exc()
-            logger.error(f"Error in method '{method}': {tb}")
+                response = {"id": req_id, "ok": True, "body": result}
 
-            return {"id": req_id, "ok": False, "error": str(e)}
+                # Add trace headers to response
+                self.tracing.add_response_headers(response)
+
+                return response
+            except Exception as e:
+                # Capture the full traceback for debugging
+                tb = traceback.format_exc()
+                logger.error(f"Error in method '{method}': {tb}")
+
+                if span:
+                    # Record exception in span
+                    span.record_exception(e)
+
+                return {"id": req_id, "ok": False, "error": str(e)}
 
 
-def run_worker(socket_path: Optional[str] = None):
-    """
-    Run the worker with the specified socket path.
+def run_worker(socket_path: Optional[str] = None, codec_type: str = "auto"):
+    """Run the worker with the specified socket path.
 
     Args:
         socket_path: Path to the Unix domain socket.
                     If not provided, uses environment variable PYPROC_SOCKET_PATH.
+        codec_type: Type of codec to use ("auto", "json", "orjson", "msgspec", "msgpack")
+                   "auto" will choose the fastest available codec.
+
     """
     if socket_path is None:
         socket_path = os.environ.get("PYPROC_SOCKET_PATH")
         if not socket_path:
             raise ValueError("Socket path must be provided or set in PYPROC_SOCKET_PATH")
 
-    worker = Worker(socket_path)
+    # Check for codec type from environment variable
+    env_codec = os.environ.get("PYPROC_CODEC_TYPE")
+    if env_codec:
+        codec_type = env_codec
+
+    worker = Worker(socket_path, codec_type)
     worker.start()
 
 
