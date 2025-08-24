@@ -28,7 +28,7 @@ func TestMultiplexedTransport(t *testing.T) {
 		if err := worker.Start(ctx); err != nil {
 			t.Fatalf("Failed to start worker: %v", err)
 		}
-		defer worker.Stop()
+		defer func() { _ = worker.Stop() }()
 
 		// Give worker time to stabilize
 		time.Sleep(100 * time.Millisecond)
@@ -46,7 +46,7 @@ func TestMultiplexedTransport(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create transport: %v", err)
 		}
-		defer transport.Close()
+		defer func() { _ = transport.Close() }()
 
 		// Send multiple concurrent requests
 		const numRequests = 10
@@ -143,7 +143,7 @@ func TestMultiplexedTransport(t *testing.T) {
 		if err := worker.Start(ctx); err != nil {
 			t.Fatalf("Failed to start worker: %v", err)
 		}
-		defer worker.Stop()
+		defer func() { _ = worker.Stop() }()
 
 		// Give worker time to stabilize
 		time.Sleep(100 * time.Millisecond)
@@ -158,7 +158,7 @@ func TestMultiplexedTransport(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create transport: %v", err)
 		}
-		defer transport.Close()
+		defer func() { _ = transport.Close() }()
 
 		// Create large payload
 		largeData := make([]byte, 1024*1024) // 1MB
@@ -205,7 +205,7 @@ func BenchmarkMultiplexedTransport(b *testing.B) {
 	if err := worker.Start(ctx); err != nil {
 		b.Fatalf("Failed to start worker: %v", err)
 	}
-	defer worker.Stop()
+	defer func() { _ = worker.Stop() }()
 
 	// Give worker time to stabilize
 	time.Sleep(100 * time.Millisecond)
@@ -220,7 +220,7 @@ func BenchmarkMultiplexedTransport(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create transport: %v", err)
 	}
-	defer transport.Close()
+	defer func() { _ = transport.Close() }()
 
 	// Create request
 	req, _ := protocol.NewRequest(0, "predict", map[string]interface{}{

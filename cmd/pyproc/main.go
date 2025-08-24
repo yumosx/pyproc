@@ -1,3 +1,4 @@
+// Package main provides the pyproc CLI for scaffolding Python worker projects.
 package main
 
 import (

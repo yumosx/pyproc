@@ -113,7 +113,7 @@ func (h *HMACAuth) AuthenticateServer(conn net.Conn) error {
 	return nil
 }
 
-// SecureListener wraps a listener with HMAC authentication
+// HMACListener wraps a listener with HMAC authentication
 type HMACListener struct {
 	net.Listener
 	auth *HMACAuth

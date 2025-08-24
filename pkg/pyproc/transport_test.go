@@ -179,21 +179,21 @@ func TestTransportPool(t *testing.T) {
 			transports: []Transport{
 				&MockTransport{
 					healthy: true,
-					callFunc: func(ctx context.Context, req *protocol.Request) (*protocol.Response, error) {
+					callFunc: func(_ context.Context, _ *protocol.Request) (*protocol.Response, error) {
 						callCounts[0]++
 						return &protocol.Response{OK: true}, nil
 					},
 				},
 				&MockTransport{
 					healthy: true,
-					callFunc: func(ctx context.Context, req *protocol.Request) (*protocol.Response, error) {
+					callFunc: func(_ context.Context, _ *protocol.Request) (*protocol.Response, error) {
 						callCounts[1]++
 						return &protocol.Response{OK: true}, nil
 					},
 				},
 				&MockTransport{
 					healthy: true,
-					callFunc: func(ctx context.Context, req *protocol.Request) (*protocol.Response, error) {
+					callFunc: func(_ context.Context, _ *protocol.Request) (*protocol.Response, error) {
 						callCounts[2]++
 						return &protocol.Response{OK: true}, nil
 					},
