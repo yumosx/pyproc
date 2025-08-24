@@ -65,12 +65,6 @@ func (t *GRPCTransport) connect() error {
 		}),
 	}
 
-	// Add custom timeout if specified
-	timeout := 5 * time.Second
-	if timeoutVal, ok := t.config.Options["timeout"].(time.Duration); ok {
-		timeout = timeoutVal
-	}
-
 	// Determine target based on transport type
 	var target string
 	switch t.config.Type {
