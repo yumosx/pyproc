@@ -31,7 +31,7 @@ func TestTypedPool(t *testing.T) {
 		if err := pool.Start(ctx); err != nil {
 			t.Fatalf("Failed to start pool: %v", err)
 		}
-		defer pool.Shutdown(ctx)
+		defer func() { _ = pool.Shutdown(ctx) }()
 
 		// Give workers time to stabilize
 		time.Sleep(100 * time.Millisecond)
@@ -76,7 +76,7 @@ func TestTypedPool(t *testing.T) {
 		if err := pool.Start(ctx); err != nil {
 			t.Fatalf("Failed to start pool: %v", err)
 		}
-		defer pool.Shutdown(ctx)
+		defer func() { _ = pool.Shutdown(ctx) }()
 
 		// Give workers time to stabilize
 		time.Sleep(100 * time.Millisecond)
@@ -142,7 +142,7 @@ func TestTypedPool(t *testing.T) {
 		if err := pool.Start(ctx); err != nil {
 			t.Fatalf("Failed to start pool: %v", err)
 		}
-		defer pool.Shutdown(ctx)
+		defer func() { _ = pool.Shutdown(ctx) }()
 
 		// Give workers time to stabilize
 		time.Sleep(100 * time.Millisecond)
@@ -203,7 +203,7 @@ func BenchmarkTypedPool(b *testing.B) {
 	if err := pool.Start(ctx); err != nil {
 		b.Fatalf("Failed to start pool: %v", err)
 	}
-	defer pool.Shutdown(ctx)
+	defer func() { _ = pool.Shutdown(ctx) }()
 
 	// Give workers time to stabilize
 	time.Sleep(100 * time.Millisecond)

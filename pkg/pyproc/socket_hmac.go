@@ -38,7 +38,7 @@ func (h *HMACAuth) AuthenticateClient(conn net.Conn) error {
 	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return fmt.Errorf("failed to set deadline: %w", err)
 	}
-	defer conn.SetDeadline(time.Time{}) // Reset deadline
+	defer func() { _ = conn.SetDeadline(time.Time{}) }() // Reset deadline
 
 	// Read challenge from server
 	challenge := make([]byte, 32)
@@ -75,7 +75,7 @@ func (h *HMACAuth) AuthenticateServer(conn net.Conn) error {
 	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return fmt.Errorf("failed to set deadline: %w", err)
 	}
-	defer conn.SetDeadline(time.Time{}) // Reset deadline
+	defer func() { _ = conn.SetDeadline(time.Time{}) }() // Reset deadline
 
 	// Generate random challenge
 	challenge := make([]byte, 32)
@@ -101,7 +101,7 @@ func (h *HMACAuth) AuthenticateServer(conn net.Conn) error {
 
 	if !hmac.Equal(response, expected) {
 		// Authentication failed
-		conn.Write([]byte{0})
+		_ = conn.Write([]byte{0})
 		return fmt.Errorf("HMAC verification failed")
 	}
 
@@ -136,7 +136,7 @@ func (l *HMACListener) Accept() (net.Conn, error) {
 
 	// Perform authentication
 	if err := l.auth.AuthenticateServer(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
@@ -158,7 +158,7 @@ func DialSecure(network, address string, secret []byte) (*SecureConn, error) {
 
 	auth := NewHMACAuth(secret)
 	if err := auth.AuthenticateClient(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 

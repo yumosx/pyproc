@@ -183,7 +183,7 @@ func generateFromTemplate(tmplPath, outPath string, data interface{}) error {
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	// Execute template
 	if err := tmpl.Execute(outFile, data); err != nil {
@@ -200,13 +200,13 @@ func copyEmbeddedFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err
