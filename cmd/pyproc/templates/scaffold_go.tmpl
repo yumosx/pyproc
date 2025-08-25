@@ -1,0 +1,135 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/YuminosukeSato/pyproc/pkg/pyproc"
+)
+
+// {{.Name}}Client provides typed methods for calling Python {{.Name}} worker
+type {{.Name}}Client struct {
+	pool *pyproc.Pool
+}
+
+// New{{.Name}}Client creates a new typed client for the {{.Name}} worker
+func New{{.Name}}Client(pool *pyproc.Pool) *{{.Name}}Client {
+	return &{{.Name}}Client{pool: pool}
+}
+
+// Example request/response types - customize these for your use case
+
+type ProcessRequest struct {
+	Data   interface{} `json:"data"`
+	Config map[string]interface{} `json:"config,omitempty"`
+}
+
+type ProcessResponse struct {
+	Result interface{} `json:"result"`
+	Status string      `json:"status"`
+	Error  string      `json:"error,omitempty"`
+}
+
+// Process calls the 'process' method on the Python worker
+func (c *{{.Name}}Client) Process(ctx context.Context, req ProcessRequest) (*ProcessResponse, error) {
+	var resp ProcessResponse
+	if err := c.pool.Call(ctx, "process", req, &resp); err != nil {
+		return nil, fmt.Errorf("process call failed: %w", err)
+	}
+	return &resp, nil
+}
+
+// AnalyzeRequest represents a request to analyze data
+type AnalyzeRequest struct {
+	Items []interface{} `json:"items"`
+	Options map[string]interface{} `json:"options,omitempty"`
+}
+
+// AnalyzeResponse represents the analysis results
+type AnalyzeResponse struct {
+	Summary map[string]interface{} `json:"summary"`
+	Details []interface{} `json:"details"`
+}
+
+// Analyze calls the 'analyze' method on the Python worker
+func (c *{{.Name}}Client) Analyze(ctx context.Context, req AnalyzeRequest) (*AnalyzeResponse, error) {
+	var resp AnalyzeResponse
+	if err := c.pool.Call(ctx, "analyze", req, &resp); err != nil {
+		return nil, fmt.Errorf("analyze call failed: %w", err)
+	}
+	return &resp, nil
+}
+
+// BatchProcess processes multiple items in parallel
+func (c *{{.Name}}Client) BatchProcess(ctx context.Context, items []interface{}) ([]ProcessResponse, error) {
+	results := make([]ProcessResponse, len(items))
+	errChan := make(chan error, len(items))
+	
+	for i, item := range items {
+		go func(idx int, data interface{}) {
+			req := ProcessRequest{Data: data}
+			resp, err := c.Process(ctx, req)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			results[idx] = *resp
+			errChan <- nil
+		}(i, item)
+	}
+	
+	// Wait for all requests to complete
+	for i := 0; i < len(items); i++ {
+		if err := <-errChan; err != nil {
+			return nil, err
+		}
+	}
+	
+	return results, nil
+}
+
+// Example usage
+func example() {
+	// Create pool options
+	opts := pyproc.PoolOptions{
+		NumWorkers:    4,
+		PythonPath:    "python3",
+		WorkerScript:  "worker/python/{{.Name}}_worker.py",
+		SocketPrefix:  "/tmp/{{.Name}}",
+		StartupTimeout: 10 * time.Second,
+		CallTimeout:   5 * time.Second,
+	}
+	
+	// Create and start pool
+	logger := pyproc.NewLogger(pyproc.LogLevelInfo)
+	pool, err := pyproc.NewPool(opts, logger)
+	if err != nil {
+		log.Fatalf("Failed to create pool: %v", err)
+	}
+	
+	ctx := context.Background()
+	if err := pool.Start(ctx); err != nil {
+		log.Fatalf("Failed to start pool: %v", err)
+	}
+	defer pool.Stop()
+	
+	// Create typed client
+	client := New{{.Name}}Client(pool)
+	
+	// Make a request
+	req := ProcessRequest{
+		Data: map[string]interface{}{
+			"input": "sample data",
+			"type":  "text",
+		},
+	}
+	
+	resp, err := client.Process(ctx, req)
+	if err != nil {
+		log.Printf("Process failed: %v", err)
+	} else {
+		fmt.Printf("Result: %+v\n", resp)
+	}
+}

@@ -1,18 +1,22 @@
-"""
-pyproc_worker - Python worker for pyproc
+"""pyproc_worker - Python worker for pyproc.
 
 This module implements the Python side of the pyproc protocol,
 allowing Python functions to be exposed and called from Go.
 """
 
-import json
+from __future__ import annotations
+
 import logging
 import os
 import socket
 import struct
 import sys
 import traceback
-from typing import Any, Callable, Dict, Optional
+from pathlib import Path
+from typing import Any, Callable
+
+from .codec import Codec, get_codec
+from .tracing import get_tracing
 
 # Setup logging
 logging.basicConfig(
@@ -23,12 +27,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Registry for exposed functions
-_exposed_functions: Dict[str, Callable] = {}
+_exposed_functions: dict[str, Callable] = {}
 
 
 def expose(func: Callable) -> Callable:
-    """
-    Decorator to expose a Python function to Go.
+    """Expose a Python function to Go.
 
     Usage:
         @expose
@@ -36,17 +39,18 @@ def expose(func: Callable) -> Callable:
             return {"result": req["input"] * 2}
     """
     _exposed_functions[func.__name__] = func
-    logger.info(f"Exposed function: {func.__name__}")
+    logger.info("Exposed function: %s", func.__name__)
     return func
 
 
 class FramedConnection:
     """Handles framed message communication over a socket."""
 
-    def __init__(self, conn: socket.socket):
+    def __init__(self, conn: socket.socket, codec: Codec | None = None) -> None:
         self.conn = conn
+        self.codec = codec or get_codec("auto")
 
-    def read_message(self) -> Optional[bytes]:
+    def read_message(self) -> bytes | None:
         """Read a framed message from the socket."""
         # Read 4-byte length header
         length_bytes = self._read_exact(4)
@@ -59,7 +63,8 @@ class FramedConnection:
         # Read message body
         message = self._read_exact(length)
         if not message:
-            raise Exception("Failed to read complete message")
+            msg = "Failed to read complete message"
+            raise RuntimeError(msg)
 
         return message
 
@@ -72,7 +77,7 @@ class FramedConnection:
         # Write message body
         self.conn.sendall(data)
 
-    def _read_exact(self, n: int) -> Optional[bytes]:
+    def _read_exact(self, n: int) -> bytes | None:
         """Read exactly n bytes from the socket."""
         data = b""
         while len(data) < n:
@@ -86,30 +91,34 @@ class FramedConnection:
 class Worker:
     """Main worker class that handles requests from Go."""
 
-    def __init__(self, socket_path: str):
+    def __init__(self, socket_path: str, codec_type: str = "auto") -> None:
         self.socket_path = socket_path
+        self.codec = get_codec(codec_type)
         self.conn = None
         self.framed_conn = None
+        self.tracing = get_tracing()
+        logger.info("Using codec: %s", self.codec.name)
 
-    def start(self):
+    def start(self) -> None:
         """Start the worker and listen for requests."""
         # Remove socket file if it exists
-        if os.path.exists(self.socket_path):
-            os.unlink(self.socket_path)
+        socket_file = Path(self.socket_path)
+        if socket_file.exists():
+            socket_file.unlink()
 
         # Create Unix domain socket
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(self.socket_path)
         sock.listen(1)
 
-        logger.info(f"Worker listening on {self.socket_path}")
+        logger.info("Worker listening on %s", self.socket_path)
 
         while True:
             try:
                 # Accept connection
                 conn, _ = sock.accept()
                 self.conn = conn
-                self.framed_conn = FramedConnection(conn)
+                self.framed_conn = FramedConnection(conn, self.codec)
 
                 logger.info("Accepted connection")
 
@@ -119,12 +128,12 @@ class Worker:
             except KeyboardInterrupt:
                 logger.info("Worker shutting down")
                 break
-            except Exception as e:
-                logger.error(f"Connection error: {e}")
+            except Exception:
+                logger.exception("Connection error")
                 if self.conn:
                     self.conn.close()
 
-    def _handle_connection(self):
+    def _handle_connection(self) -> None:
         """Handle requests on the current connection."""
         while True:
             try:
@@ -135,28 +144,28 @@ class Worker:
                     break
 
                 # Parse request
-                request = json.loads(message.decode("utf-8"))
+                request = self.framed_conn.codec.decode(message)
                 logger.debug(f"Received request: {request}")
 
                 # Process request
                 response = self._process_request(request)
 
                 # Send response
-                response_bytes = json.dumps(response).encode("utf-8")
+                response_bytes = self.framed_conn.codec.encode(response)
                 self.framed_conn.write_message(response_bytes)
 
             except Exception as e:
-                logger.error(f"Error handling request: {e}")
+                logger.exception("Error handling request")
                 # Try to send error response
                 try:
                     error_response = {"id": 0, "ok": False, "error": str(e)}
-                    response_bytes = json.dumps(error_response).encode("utf-8")
+                    response_bytes = self.framed_conn.codec.encode(error_response)
                     self.framed_conn.write_message(response_bytes)
                 except Exception:  # noqa: S110
                     pass
                 break
 
-    def _process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def _process_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Process a single request and return a response."""
         req_id = request.get("id", 0)
         method = request.get("method", "")
@@ -166,39 +175,58 @@ class Worker:
         if method not in _exposed_functions:
             return {"id": req_id, "ok": False, "error": f"Method '{method}' not found"}
 
-        try:
-            # Call the exposed function
-            func = _exposed_functions[method]
-            result = func(body)
+        # Create tracing context for this request
+        with self.tracing.trace_request(request) as span:
+            try:
+                # Call the exposed function
+                func = _exposed_functions[method]
+                result = func(body)
 
-            return {"id": req_id, "ok": True, "body": result}
-        except Exception as e:
-            # Capture the full traceback for debugging
-            tb = traceback.format_exc()
-            logger.error(f"Error in method '{method}': {tb}")
+                response = {"id": req_id, "ok": True, "body": result}
 
-            return {"id": req_id, "ok": False, "error": str(e)}
+                # Add trace headers to response
+                self.tracing.add_response_headers(response)
+
+                return response
+            except Exception as e:
+                # Capture the full traceback for debugging
+                tb = traceback.format_exc()
+                logger.exception("Error in method '%s': %s", method, tb)
+
+                if span:
+                    # Record exception in span
+                    span.record_exception(e)
+
+                return {"id": req_id, "ok": False, "error": str(e)}
 
 
-def run_worker(socket_path: Optional[str] = None):
-    """
-    Run the worker with the specified socket path.
+def run_worker(socket_path: str | None = None, codec_type: str = "auto") -> None:
+    """Run the worker with the specified socket path.
 
     Args:
         socket_path: Path to the Unix domain socket.
                     If not provided, uses environment variable PYPROC_SOCKET_PATH.
+        codec_type: Type of codec to use ("auto", "json", "orjson", "msgspec", "msgpack")
+                   "auto" will choose the fastest available codec.
+
     """
     if socket_path is None:
         socket_path = os.environ.get("PYPROC_SOCKET_PATH")
         if not socket_path:
-            raise ValueError("Socket path must be provided or set in PYPROC_SOCKET_PATH")
+            msg = "Socket path must be provided or set in PYPROC_SOCKET_PATH"
+            raise ValueError(msg)
 
-    worker = Worker(socket_path)
+    # Check for codec type from environment variable
+    env_codec = os.environ.get("PYPROC_CODEC_TYPE")
+    if env_codec:
+        codec_type = env_codec
+
+    worker = Worker(socket_path, codec_type)
     worker.start()
 
 
 # Health check method (always available)
 @expose
-def health(req):
+def health(_req):
     """Health check endpoint."""
     return {"status": "healthy", "pid": os.getpid()}

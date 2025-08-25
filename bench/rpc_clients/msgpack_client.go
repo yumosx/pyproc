@@ -166,4 +166,3 @@ func (c *MsgpackRPCClient) Close() error {
 func (c *MsgpackRPCClient) Name() string {
 	return "msgpack-rpc"
 }
-

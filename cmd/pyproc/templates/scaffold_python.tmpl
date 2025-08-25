@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+{{.Name}} Worker - PyProc Python Worker Implementation
+"""
+
+import sys
+import os
+import logging
+from typing import Dict, Any, List, Optional
+
+# Add pyproc_worker to path (adjust as needed for your project structure)
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'path/to/pyproc_worker'))
+
+from pyproc_worker import expose, run_worker, trace_method
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize any required resources (models, databases, etc.)
+# This runs once when the worker starts
+def initialize():
+    """Initialize worker resources."""
+    logger.info("Initializing {{.Name}} worker...")
+    # Example: Load ML model, connect to database, etc.
+    # global model
+    # model = load_model("path/to/model")
+    pass
+
+@expose
+def process(req: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Process a single request.
+    
+    Args:
+        req: Request dictionary with 'data' and optional 'config'
+    
+    Returns:
+        Dictionary with 'result', 'status', and optional 'error'
+    """
+    try:
+        data = req.get('data')
+        config = req.get('config', {})
+        
+        # Your processing logic here
+        result = {
+            'processed_data': data,
+            'metadata': {
+                'timestamp': __import__('time').time(),
+                'config_used': config
+            }
+        }
+        
+        return {
+            'result': result,
+            'status': 'success'
+        }
+    except Exception as e:
+        logger.error(f"Processing error: {e}")
+        return {
+            'result': None,
+            'status': 'error',
+            'error': str(e)
+        }
+
+@expose
+def analyze(req: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze a batch of items.
+    
+    Args:
+        req: Request with 'items' list and optional 'options'
+    
+    Returns:
+        Dictionary with 'summary' and 'details'
+    """
+    items = req.get('items', [])
+    options = req.get('options', {})
+    
+    # Perform analysis
+    summary = {
+        'total_items': len(items),
+        'processing_options': options,
+        'statistics': {
+            # Add your analysis metrics here
+            'avg': sum(len(str(item)) for item in items) / len(items) if items else 0,
+            'max': max(len(str(item)) for item in items) if items else 0,
+            'min': min(len(str(item)) for item in items) if items else 0,
+        }
+    }
+    
+    # Process each item
+    details = []
+    for i, item in enumerate(items):
+        detail = {
+            'index': i,
+            'item': item,
+            'analysis': {
+                # Add item-specific analysis here
+                'length': len(str(item)),
+                'type': type(item).__name__
+            }
+        }
+        details.append(detail)
+    
+    return {
+        'summary': summary,
+        'details': details
+    }
+
+@expose
+@trace_method  # Add tracing for performance monitoring
+def batch_process(req: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Process multiple items in batch.
+    
+    Args:
+        req: Request with 'batch' list of items to process
+    
+    Returns:
+        Dictionary with 'results' list and 'statistics'
+    """
+    batch = req.get('batch', [])
+    
+    results = []
+    errors = []
+    
+    for item in batch:
+        try:
+            # Process each item
+            result = {
+                'input': item,
+                'output': transform_item(item),
+                'success': True
+            }
+            results.append(result)
+        except Exception as e:
+            errors.append({
+                'input': item,
+                'error': str(e)
+            })
+    
+    return {
+        'results': results,
+        'errors': errors,
+        'statistics': {
+            'total': len(batch),
+            'successful': len(results),
+            'failed': len(errors)
+        }
+    }
+
+@expose
+def health_check(req: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Custom health check with detailed status.
+    
+    Returns:
+        Dictionary with health status and metrics
+    """
+    import psutil
+    import time
+    
+    process = psutil.Process()
+    
+    return {
+        'status': 'healthy',
+        'timestamp': time.time(),
+        'metrics': {
+            'memory_mb': process.memory_info().rss / 1024 / 1024,
+            'cpu_percent': process.cpu_percent(),
+            'num_threads': process.num_threads(),
+        },
+        'worker_info': {
+            'name': '{{.Name}}',
+            'version': '0.1.0',
+            'pid': os.getpid()
+        }
+    }
+
+# Helper functions (not exposed)
+def transform_item(item: Any) -> Any:
+    """
+    Transform a single item (helper function).
+    
+    This is not exposed to the Go side.
+    """
+    # Your transformation logic here
+    if isinstance(item, str):
+        return item.upper()
+    elif isinstance(item, (int, float)):
+        return item * 2
+    elif isinstance(item, list):
+        return [transform_item(x) for x in item]
+    elif isinstance(item, dict):
+        return {k: transform_item(v) for k, v in item.items()}
+    else:
+        return item
+
+def validate_input(data: Any) -> bool:
+    """
+    Validate input data (helper function).
+    """
+    # Add your validation logic
+    return data is not None
+
+if __name__ == '__main__':
+    # Initialize resources
+    initialize()
+    
+    # Start the worker
+    # Socket path can be provided via command line or environment variable
+    socket_path = None
+    if len(sys.argv) > 1:
+        socket_path = sys.argv[1]
+    
+    logger.info("Starting {{.Name}} worker...")
+    run_worker(socket_path, codec_type="auto")

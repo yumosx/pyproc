@@ -1,3 +1,4 @@
+// Package main provides a basic example of using pyproc.
 package main
 
 import (
@@ -49,7 +50,7 @@ func main() {
 	}
 	defer func() {
 		fmt.Println("\nStopping worker...")
-		worker.Stop()
+		_ = worker.Stop()
 	}()
 
 	fmt.Printf("Worker started (PID: %d)\n\n", worker.GetPID())
@@ -59,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to worker: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	framer := framing.NewFramer(conn)
 

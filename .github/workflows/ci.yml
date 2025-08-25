@@ -53,6 +53,17 @@ jobs:
       - name: Build examples
         run: go build ./examples/basic
 
+      - name: Setup Python for tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python worker package
+        run: |
+          cd worker/python
+          pip install -e .
+          cd ../..
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -92,6 +103,71 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -q
+
+  benchmark:
+    name: Performance benchmarks and gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Python with uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install Python dependencies
+        run: |
+          cd worker/python
+          uv sync --all-extras
+
+      - name: Run benchmarks
+        run: |
+          cd bench
+          go test -bench=BenchmarkLatencyPercentiles -benchmem -benchtime=10s -timeout=5m | tee benchmark_results.txt || true
+          
+          # Extract and check performance metrics
+          if grep -q "p50:" benchmark_results.txt; then
+            echo "=== Performance Results ==="
+            grep -E "p50:|p95:|p99:" benchmark_results.txt
+            
+            # Extract p50 value (in microseconds)
+            p50=$(grep "p50:" benchmark_results.txt | sed -E 's/.*p50: ([0-9.]+).*/\1/')
+            p99=$(grep "p99:" benchmark_results.txt | sed -E 's/.*p99: ([0-9.]+).*/\1/')
+            
+            echo ""
+            echo "Checking performance gates..."
+            
+            # Check p50 < 100µs
+            if [ ! -z "$p50" ]; then
+              if (( $(echo "$p50 > 100" | bc -l) )); then
+                echo "⚠️  p50 latency ${p50}µs exceeds target of 100µs (non-blocking)"
+              else
+                echo "✅ p50 latency ${p50}µs meets target (<100µs)"
+              fi
+            fi
+            
+            # Check p99 < 500µs
+            if [ ! -z "$p99" ]; then
+              if (( $(echo "$p99 > 500" | bc -l) )); then
+                echo "⚠️  p99 latency ${p99}µs exceeds target of 500µs (non-blocking)"
+              else
+                echo "✅ p99 latency ${p99}µs meets target (<500µs)"
+              fi
+            fi
+          else
+            echo "No latency metrics found in benchmark results"
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: bench/benchmark_results.txt
 
   links:
     name: README and docs link check

@@ -349,4 +349,3 @@ func BenchmarkRPCParallel(b *testing.B) {
 		})
 	}
 }
-
