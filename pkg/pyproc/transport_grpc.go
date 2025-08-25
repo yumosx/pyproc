@@ -5,11 +5,9 @@ import (
 	"fmt"
 	// "sync"
 	// "time"
-
 	// "google.golang.org/grpc"
 	// "google.golang.org/grpc/credentials/insecure"
 	// "google.golang.org/grpc/keepalive"
-
 	// pyprocv1 "github.com/YuminosukeSato/pyproc/api/v1"
 	// "github.com/YuminosukeSato/pyproc/internal/protocol"
 )
