@@ -1,5 +1,9 @@
+version: "2"
+
 run:
   timeout: 5m
+  exclude-dirs:
+    - bench
 
 linters:
   enable:
@@ -11,5 +15,3 @@ linters:
 
 issues:
   exclude-use-default: false
-  exclude-dirs:
-    - bench

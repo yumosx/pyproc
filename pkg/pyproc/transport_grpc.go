@@ -1,20 +1,22 @@
 package pyproc
 
 import (
-	"context"
+	// "context"
 	"fmt"
-	"sync"
-	"time"
+	// "sync"
+	// "time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
+	// "google.golang.org/grpc"
+	// "google.golang.org/grpc/credentials/insecure"
+	// "google.golang.org/grpc/keepalive"
 
-	pyprocv1 "github.com/YuminosukeSato/pyproc/api/v1"
-	"github.com/YuminosukeSato/pyproc/internal/protocol"
+	// pyprocv1 "github.com/YuminosukeSato/pyproc/api/v1"
+	// "github.com/YuminosukeSato/pyproc/internal/protocol"
 )
 
 // GRPCTransport implements Transport using gRPC
+// TODO: Uncomment when gRPC implementation is ready
+/*
 type GRPCTransport struct {
 	config  TransportConfig
 	logger  *Logger
@@ -24,33 +26,35 @@ type GRPCTransport struct {
 	closed  bool
 	healthy bool
 }
+*/
 
 // NewGRPCTransport creates a new gRPC transport
-func NewGRPCTransport(config TransportConfig, logger *Logger) (*GRPCTransport, error) {
+func NewGRPCTransport(_ TransportConfig, _ *Logger) (Transport, error) {
 	// gRPC transport is not fully implemented yet
 	return nil, fmt.Errorf("gRPC transport is not yet implemented")
-	
+
 	// Original implementation commented out for future use:
 	/*
-	if config.Address == "" {
-		return nil, fmt.Errorf("address is required for gRPC transport")
-	}
+		if config.Address == "" {
+			return nil, fmt.Errorf("address is required for gRPC transport")
+		}
 
-	transport := &GRPCTransport{
-		config:  config,
-		logger:  logger,
-		healthy: false,
-	}
+		transport := &GRPCTransport{
+			config:  config,
+			logger:  logger,
+			healthy: false,
+		}
 
-	// Connect to gRPC server
-	if err := transport.connect(); err != nil {
-		return nil, err
-	}
+		// Connect to gRPC server
+		if err := transport.connect(); err != nil {
+			return nil, err
+		}
 
-	return transport, nil
+		return transport, nil
 	*/
 }
 
+/*
 // connect establishes the gRPC connection
 func (t *GRPCTransport) connect() error {
 	t.mu.Lock()
@@ -96,7 +100,9 @@ func (t *GRPCTransport) connect() error {
 	t.logger.Debug("gRPC transport connected", "address", t.config.Address, "type", t.config.Type)
 	return nil
 }
+*/
 
+/*
 // Call sends a request and receives a response via gRPC
 func (t *GRPCTransport) Call(ctx context.Context, req *protocol.Request) (*protocol.Response, error) {
 	t.mu.RLock()
@@ -187,3 +193,4 @@ func (t *GRPCTransport) IsHealthy() bool {
 
 	return t.healthy
 }
+*/

@@ -22,8 +22,8 @@ func getPeerCredentials(fd int) (*PeerCredentials, error) {
 		groups  [16]uint32
 	}
 
-	const LOCAL_PEERCRED = 0x001 // from sys/un.h
-	const SOL_LOCAL = 0          // from sys/socket.h
+	const localPeerCred = 0x001 // from sys/un.h
+	const solLocal = 0          // from sys/socket.h
 
 	cred := &xucred{}
 	credLen := uint32(unsafe.Sizeof(*cred))
@@ -31,8 +31,8 @@ func getPeerCredentials(fd int) (*PeerCredentials, error) {
 	_, _, errno := syscall.Syscall6(
 		syscall.SYS_GETSOCKOPT,
 		uintptr(fd),
-		uintptr(SOL_LOCAL),
-		uintptr(LOCAL_PEERCRED),
+		uintptr(solLocal),
+		uintptr(localPeerCred),
 		uintptr(unsafe.Pointer(cred)),
 		uintptr(unsafe.Pointer(&credLen)),
 		0,
