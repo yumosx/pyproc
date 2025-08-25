@@ -1,0 +1,20 @@
+name: "CodeQL Configuration"
+
+# パスの除外設定
+paths-ignore:
+  - 'examples/**'      # サンプルコードを除外
+  - 'bench/**'         # ベンチマークコードを除外
+  - 'docs/**'          # ドキュメントファイルを除外
+  - '**/*_test.go'     # Goのテストファイルは除外（必要に応じて）
+  - '**/tests/**'      # Pythonテストディレクトリを除外（必要に応じて）
+
+# 使用するクエリスイート
+queries:
+  - uses: security-extended
+
+# 特定のクエリを除外する場合（初期設定では無効化）
+# query-filters:
+#   - exclude:
+#       id: go/unsafe-deserialization
+#   - exclude:
+#       id: py/weak-cryptographic-algorithm

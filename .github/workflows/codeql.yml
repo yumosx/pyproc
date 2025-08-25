@@ -3,8 +3,26 @@ name: "CodeQL Security Scan"
 on:
   push:
     branches: ["main"]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '**.py'
+      - 'worker/python/pyproject.toml'
+      - 'worker/python/uv.lock'
+      - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
   pull_request:
     branches: ["main"]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '**.py'
+      - 'worker/python/pyproject.toml'
+      - 'worker/python/uv.lock'
+      - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
   schedule:
     - cron: '30 2 * * 1' # 毎週月曜日 AM 2:30 (UTC)
 
@@ -47,6 +65,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
 
       # Python依存関係のインストール (uvを使用)
       - name: Install Python dependencies with uv
