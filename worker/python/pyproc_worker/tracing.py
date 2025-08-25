@@ -1,9 +1,11 @@
 """OpenTelemetry tracing support for pyproc worker."""
 
+from __future__ import annotations
+
 import logging
 import os
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ except ImportError:
 class TracingManager:
     """Manages OpenTelemetry tracing for pyproc worker."""
 
-    def __init__(self, enabled: bool = True, service_name: str = "pyproc-worker"):
+    def __init__(self, enabled: bool = True, service_name: str = "pyproc-worker") -> None:
         """Initialize the tracing manager.
 
         Args:
@@ -40,7 +42,7 @@ class TracingManager:
         if self.enabled:
             self._setup_tracing()
 
-    def _setup_tracing(self):
+    def _setup_tracing(self) -> None:
         """Set up OpenTelemetry tracing."""
         # Create a resource with service name
         resource = Resource.create(
@@ -62,14 +64,14 @@ class TracingManager:
 
         trace.set_tracer_provider(provider)
         self.tracer = trace.get_tracer(__name__)
-        logger.info(f"OpenTelemetry tracing initialized for {self.service_name}")
+        logger.info("OpenTelemetry tracing initialized for %s", self.service_name)
 
     @contextmanager
     def span(
         self,
         name: str,
-        attributes: Optional[Dict[str, Any]] = None,
-        context: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
     ):
         """Create a tracing span.
 
@@ -97,7 +99,9 @@ class TracingManager:
 
         # Start span with context
         with self.tracer.start_as_current_span(
-            name, context=ctx, attributes=attributes,
+            name,
+            context=ctx,
+            attributes=attributes,
         ) as span:
             try:
                 yield span
@@ -107,7 +111,7 @@ class TracingManager:
                     span.record_exception(e)
                 raise
 
-    def inject_context(self, carrier: Dict[str, Any]) -> None:
+    def inject_context(self, carrier: dict[str, Any]) -> None:
         """Inject current trace context into a carrier.
 
         Args:
@@ -117,7 +121,7 @@ class TracingManager:
         if self.enabled:
             inject(carrier)
 
-    def extract_context(self, carrier: Dict[str, Any]) -> Optional[Any]:
+    def extract_context(self, carrier: dict[str, Any]) -> Any | None:
         """Extract trace context from a carrier.
 
         Args:
@@ -135,7 +139,7 @@ class TracingManager:
 class WorkerTracing:
     """Tracing integration for pyproc worker."""
 
-    def __init__(self, worker_id: Optional[str] = None):
+    def __init__(self, worker_id: str | None = None) -> None:
         """Initialize worker tracing.
 
         Args:
@@ -148,7 +152,7 @@ class WorkerTracing:
             service_name=os.environ.get("PYPROC_SERVICE_NAME", "pyproc-worker"),
         )
 
-    def trace_request(self, request: Dict[str, Any]):
+    def trace_request(self, request: dict[str, Any]):
         """Create a tracing context for a request.
 
         Args:
@@ -171,10 +175,12 @@ class WorkerTracing:
         }
 
         return self.manager.span(
-            f"pyproc.{method}", attributes=attributes, context=headers,
+            f"pyproc.{method}",
+            attributes=attributes,
+            context=headers,
         )
 
-    def add_response_headers(self, response: Dict[str, Any]) -> None:
+    def add_response_headers(self, response: dict[str, Any]) -> None:
         """Add trace context to response headers.
 
         Args:
@@ -187,7 +193,7 @@ class WorkerTracing:
 
 
 # Global tracing instance (initialized lazily)
-_global_tracing: Optional[WorkerTracing] = None
+_global_tracing: WorkerTracing | None = None
 
 
 def get_tracing() -> WorkerTracing:
@@ -199,7 +205,7 @@ def get_tracing() -> WorkerTracing:
 
 
 def trace_method(func):
-    """Decorator to trace a method execution.
+    """Trace a method execution.
 
     Args:
         func: The function to trace
@@ -209,7 +215,7 @@ def trace_method(func):
 
     """
 
-    def wrapper(request: Dict[str, Any]) -> Dict[str, Any]:
+    def wrapper(request: dict[str, Any]) -> dict[str, Any]:
         tracing = get_tracing()
         with tracing.trace_request({"method": func.__name__, **request}):
             return func(request)
@@ -217,4 +223,3 @@ def trace_method(func):
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     return wrapper
-

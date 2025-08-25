@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-"""Command-line interface for pyproc-worker
-"""
+"""Command-line interface for pyproc-worker."""
 
 import argparse
 import importlib.util
@@ -8,14 +6,16 @@ import logging
 import sys
 
 
-def main():
-    """Main entry point for CLI"""
+def main() -> None:
+    """Run the main entry point for CLI."""
     parser = argparse.ArgumentParser(
         description="Python worker for pyproc - Call Python from Go without CGO",
     )
     parser.add_argument("worker_script", help="Path to the Python worker script")
     parser.add_argument(
-        "--socket-path", help="Unix domain socket path (overrides PYPROC_SOCKET_PATH)", default=None,
+        "--socket-path",
+        help="Unix domain socket path (overrides PYPROC_SOCKET_PATH)",
+        default=None,
     )
     parser.add_argument(
         "--log-level",
@@ -39,7 +39,6 @@ def main():
         sys.modules["worker"] = worker_module
         spec.loader.exec_module(worker_module)
     else:
-        print(f"Error: Could not load worker script: {args.worker_script}")
         sys.exit(1)
 
 

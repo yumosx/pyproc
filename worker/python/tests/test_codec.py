@@ -11,7 +11,7 @@ from pyproc_worker.codec import (
 )
 
 
-def test_json_codec():
+def test_json_codec() -> None:
     """Test standard JSON codec."""
     codec = JSONCodec()
     assert codec.name == "json-stdlib"
@@ -25,7 +25,7 @@ def test_json_codec():
     assert decoded == data
 
 
-def test_orjson_codec():
+def test_orjson_codec() -> None:
     """Test orjson codec if available."""
     if not HAS_ORJSON:
         pytest.skip("orjson not installed")
@@ -42,7 +42,7 @@ def test_orjson_codec():
     assert decoded == data
 
 
-def test_get_codec_auto():
+def test_get_codec_auto() -> None:
     """Test automatic codec selection."""
     codec = get_codec("auto")
 
@@ -55,13 +55,13 @@ def test_get_codec_auto():
         assert codec.name == "json-stdlib"
 
 
-def test_get_codec_json():
+def test_get_codec_json() -> None:
     """Test explicit JSON codec selection."""
     codec = get_codec("json")
     assert codec.name == "json-stdlib"
 
 
-def test_get_codec_orjson():
+def test_get_codec_orjson() -> None:
     """Test explicit orjson codec selection."""
     if not HAS_ORJSON:
         pytest.skip("orjson not installed")
@@ -70,7 +70,7 @@ def test_get_codec_orjson():
     assert codec.name == "json-orjson"
 
 
-def test_codec_roundtrip():
+def test_codec_roundtrip() -> None:
     """Test that all codecs can roundtrip various data types."""
     test_data = [
         {"simple": "string"},
@@ -93,8 +93,7 @@ def test_codec_roundtrip():
             assert decoded == data, f"Failed roundtrip for {codec_type} with data: {data}"
 
 
-def test_invalid_codec_type():
+def test_invalid_codec_type() -> None:
     """Test that invalid codec type raises error."""
     with pytest.raises(ValueError, match="Unknown codec type"):
         get_codec("invalid")
-

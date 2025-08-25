@@ -1,7 +1,7 @@
 from pyproc_worker import health
 
 
-def test_health_returns_fields():
+def test_health_returns_fields() -> None:
     resp = health({})
     assert isinstance(resp, dict)
     assert resp.get("status") == "healthy"

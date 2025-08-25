@@ -6,152 +6,143 @@ Demonstrates simple function exposure and usage.
 
 import sys
 import os
-import json
 
 # Add pyproc_worker to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../worker/python'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../worker/python"))
 
 from pyproc_worker import expose, run_worker
+
 
 @expose
 def predict(req):
     """
     Simple prediction function that multiplies input by 2.
-    
+
     Args:
         req: Dict with 'value' key
-    
+
     Returns:
         Dict with 'result' key
     """
-    value = req.get('value', 0)
-    return {
-        'result': value * 2,
-        'model': 'simple-multiplier',
-        'confidence': 0.99
-    }
+    value = req.get("value", 0)
+    return {"result": value * 2, "model": "simple-multiplier", "confidence": 0.99}
+
 
 @expose
 def process_batch(req):
     """
     Process a batch of values.
-    
+
     Args:
         req: Dict with 'values' list
-    
+
     Returns:
         Dict with processed results
     """
-    values = req.get('values', [])
+    values = req.get("values", [])
     results = [v * 2 for v in values]
-    return {
-        'results': results,
-        'count': len(results),
-        'sum': sum(results)
-    }
+    return {"results": results, "count": len(results), "sum": sum(results)}
+
 
 @expose
 def transform_text(req):
     """
     Simple text transformation.
-    
+
     Args:
         req: Dict with 'text' and 'operation' keys
-    
+
     Returns:
         Dict with transformed text
     """
-    text = req.get('text', '')
-    operation = req.get('operation', 'upper')
-    
-    if operation == 'upper':
+    text = req.get("text", "")
+    operation = req.get("operation", "upper")
+
+    if operation == "upper":
         result = text.upper()
-    elif operation == 'lower':
+    elif operation == "lower":
         result = text.lower()
-    elif operation == 'reverse':
+    elif operation == "reverse":
         result = text[::-1]
     else:
         result = text
-    
+
+    # Return with field names matching Go struct
+    word_count = len(text.split())
     return {
-        'original': text,
-        'transformed': result,
-        'operation': operation
+        "transformed_text": result,
+        "word_count": word_count,
+        "original": text,
+        "operation": operation,
     }
+
 
 @expose
 def compute_stats(req):
     """
     Compute statistics for a list of numbers.
-    
+
     Args:
         req: Dict with 'numbers' list
-    
+
     Returns:
         Dict with statistics
     """
-    numbers = req.get('numbers', [])
-    
+    numbers = req.get("numbers", [])
+
     if not numbers:
-        return {
-            'count': 0,
-            'mean': 0,
-            'min': 0,
-            'max': 0,
-            'sum': 0
-        }
-    
+        return {"count": 0, "mean": 0, "min": 0, "max": 0, "sum": 0}
+
     return {
-        'count': len(numbers),
-        'mean': sum(numbers) / len(numbers),
-        'min': min(numbers),
-        'max': max(numbers),
-        'sum': sum(numbers)
+        "count": len(numbers),
+        "mean": sum(numbers) / len(numbers),
+        "min": min(numbers),
+        "max": max(numbers),
+        "sum": sum(numbers),
     }
+
 
 @expose
 def echo_worker_id(req):
     """
     Echo back the request with worker ID for testing round-robin.
-    
+
     Args:
         req: Dict with any content
-    
+
     Returns:
         Dict with echo and worker_id placeholder
     """
     import time
-    return {
-        'echo': req,
-        'timestamp': time.time()
-    }
+
+    return {"echo": req, "timestamp": time.time()}
+
 
 @expose
 def slow_process(req):
     """
     Simulate a slow process for testing backpressure.
-    
+
     Args:
         req: Dict with 'value' and optional 'sleep' duration
-    
+
     Returns:
         Dict with processed value
     """
     import time
-    sleep_duration = req.get('sleep', 0.1)
-    time.sleep(sleep_duration)
-    
-    value = req.get('value', 0)
-    return {
-        'result': value * 2,
-        'duration': sleep_duration
-    }
 
-if __name__ == '__main__':
+    sleep_duration = req.get("sleep", 0.1)
+    time.sleep(sleep_duration)
+
+    value = req.get("value", 0)
+    return {"result": value * 2, "duration": sleep_duration}
+
+
+if __name__ == "__main__":
     # Run the worker
     # Socket path can be provided as command line argument or environment variable
     socket_path = None
     if len(sys.argv) > 1:
         socket_path = sys.argv[1]
-    
+
     run_worker(socket_path)

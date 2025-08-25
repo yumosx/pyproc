@@ -5,7 +5,7 @@ import pytest
 from pyproc_worker.codec import HAS_MSGSPEC, MsgpackCodec, MsgspecCodec, get_codec
 
 
-def test_msgspec_json_codec():
+def test_msgspec_json_codec() -> None:
     """Test msgspec JSON codec."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -22,7 +22,7 @@ def test_msgspec_json_codec():
     assert decoded == data
 
 
-def test_msgpack_codec():
+def test_msgpack_codec() -> None:
     """Test MessagePack codec."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -39,7 +39,7 @@ def test_msgpack_codec():
     assert decoded == data
 
 
-def test_get_codec_msgspec():
+def test_get_codec_msgspec() -> None:
     """Test explicit msgspec codec selection."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -48,7 +48,7 @@ def test_get_codec_msgspec():
     assert codec.name == "msgspec"
 
 
-def test_get_codec_msgpack():
+def test_get_codec_msgpack() -> None:
     """Test explicit msgpack codec selection."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -57,7 +57,7 @@ def test_get_codec_msgpack():
     assert codec.name == "msgpack"
 
 
-def test_msgspec_complex_data():
+def test_msgspec_complex_data() -> None:
     """Test msgspec with complex data structures."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -85,7 +85,7 @@ def test_msgspec_complex_data():
         assert decoded == complex_data
 
 
-def test_msgspec_performance():
+def test_msgspec_performance() -> None:
     """Simple performance test to verify msgspec is faster than stdlib JSON."""
     if not HAS_MSGSPEC:
         pytest.skip("msgspec not installed")
@@ -94,8 +94,7 @@ def test_msgspec_performance():
 
     # Create a large dataset
     large_data = {
-        f"key_{i}": {"value": i, "squared": i**2, "text": f"item_{i}"}
-        for i in range(1000)
+        f"key_{i}": {"value": i, "squared": i**2, "text": f"item_{i}"} for i in range(1000)
     }
 
     # Test stdlib JSON
@@ -116,5 +115,6 @@ def test_msgspec_performance():
 
     # msgspec should be faster
     # Allow some margin for CI environments
-    assert msgspec_time < json_time * 1.5, f"msgspec ({msgspec_time:.4f}s) should be faster than JSON ({json_time:.4f}s)"
-
+    assert msgspec_time < json_time * 1.5, (
+        f"msgspec ({msgspec_time:.4f}s) should be faster than JSON ({json_time:.4f}s)"
+    )

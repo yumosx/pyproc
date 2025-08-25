@@ -6,12 +6,14 @@ from typing import Any
 
 try:
     import orjson
+
     HAS_ORJSON = True
 except ImportError:
     HAS_ORJSON = False
 
 try:
     import msgspec
+
     HAS_MSGSPEC = True
 except ImportError:
     HAS_MSGSPEC = False
@@ -51,9 +53,10 @@ class JSONCodec(Codec):
 class OrjsonCodec(Codec):
     """orjson-based JSON codec (faster)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not HAS_ORJSON:
-            raise ImportError("orjson is not installed")
+            msg = "orjson is not installed"
+            raise ImportError(msg)
 
     def encode(self, obj: Any) -> bytes:
         return orjson.dumps(obj)
@@ -69,9 +72,10 @@ class OrjsonCodec(Codec):
 class MsgspecCodec(Codec):
     """msgspec-based codec (fastest, with type validation)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not HAS_MSGSPEC:
-            raise ImportError("msgspec is not installed. Install with: pip install msgspec")
+            msg = "msgspec is not installed. Install with: pip install msgspec"
+            raise ImportError(msg)
         self.encoder = msgspec.json.Encoder()
         self.decoder = msgspec.json.Decoder()
 
@@ -89,9 +93,10 @@ class MsgspecCodec(Codec):
 class MsgpackCodec(Codec):
     """MessagePack codec using msgspec."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not HAS_MSGSPEC:
-            raise ImportError("msgspec is not installed. Install with: pip install msgspec")
+            msg = "msgspec is not installed. Install with: pip install msgspec"
+            raise ImportError(msg)
         self.encoder = msgspec.msgpack.Encoder()
         self.decoder = msgspec.msgpack.Decoder()
 
@@ -132,12 +137,9 @@ def get_codec(codec_type: str = "auto") -> Codec:
         return MsgspecCodec()
     if codec_type == "msgpack":
         return MsgpackCodec()
-    raise ValueError(f"Unknown codec type: {codec_type}")
+    msg = f"Unknown codec type: {codec_type}"
+    raise ValueError(msg)
 
 
 # Default codec - use orjson if available, fallback to stdlib
-if HAS_ORJSON:
-    default_codec = OrjsonCodec()
-else:
-    default_codec = JSONCodec()
-
+default_codec = OrjsonCodec() if HAS_ORJSON else JSONCodec()

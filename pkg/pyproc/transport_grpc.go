@@ -27,6 +27,11 @@ type GRPCTransport struct {
 
 // NewGRPCTransport creates a new gRPC transport
 func NewGRPCTransport(config TransportConfig, logger *Logger) (*GRPCTransport, error) {
+	// gRPC transport is not fully implemented yet
+	return nil, fmt.Errorf("gRPC transport is not yet implemented")
+	
+	// Original implementation commented out for future use:
+	/*
 	if config.Address == "" {
 		return nil, fmt.Errorf("address is required for gRPC transport")
 	}
@@ -43,6 +48,7 @@ func NewGRPCTransport(config TransportConfig, logger *Logger) (*GRPCTransport, e
 	}
 
 	return transport, nil
+	*/
 }
 
 // connect establishes the gRPC connection

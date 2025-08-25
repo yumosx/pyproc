@@ -7,7 +7,7 @@ import pytest
 from pyproc_worker.tracing import HAS_OTEL, TracingManager, WorkerTracing, trace_method
 
 
-def test_tracing_disabled_without_otel():
+def test_tracing_disabled_without_otel() -> None:
     """Test that tracing is disabled when OpenTelemetry is not installed."""
     if HAS_OTEL:
         manager = TracingManager(enabled=False)
@@ -17,7 +17,7 @@ def test_tracing_disabled_without_otel():
         assert not manager.enabled
 
 
-def test_tracing_manager_init():
+def test_tracing_manager_init() -> None:
     """Test TracingManager initialization."""
     if not HAS_OTEL:
         pytest.skip("OpenTelemetry not installed")
@@ -27,14 +27,14 @@ def test_tracing_manager_init():
     assert manager.service_name == "test-service"
 
 
-def test_worker_tracing_init():
+def test_worker_tracing_init() -> None:
     """Test WorkerTracing initialization."""
     tracing = WorkerTracing(worker_id="test-worker")
     assert tracing.worker_id == "test-worker"
     assert tracing.manager is not None
 
 
-def test_trace_request_context():
+def test_trace_request_context() -> None:
     """Test creating trace context for a request."""
     if not HAS_OTEL:
         pytest.skip("OpenTelemetry not installed")
@@ -54,7 +54,7 @@ def test_trace_request_context():
             assert span is not None
 
 
-def test_trace_method_decorator():
+def test_trace_method_decorator() -> None:
     """Test the trace_method decorator."""
 
     @trace_method
@@ -67,7 +67,7 @@ def test_trace_method_decorator():
     assert sample_method.__name__ == "sample_method"
 
 
-def test_add_response_headers():
+def test_add_response_headers() -> None:
     """Test adding trace headers to response."""
     tracing = WorkerTracing()
     response = {"id": 1, "ok": True, "body": {}}
@@ -82,7 +82,7 @@ def test_add_response_headers():
         assert "headers" not in response or response["headers"] == {}
 
 
-def test_tracing_with_exception():
+def test_tracing_with_exception() -> None:
     """Test tracing behavior when an exception occurs."""
     if not HAS_OTEL:
         pytest.skip("OpenTelemetry not installed")
@@ -94,7 +94,8 @@ def test_tracing_with_exception():
 
     try:
         with tracing.trace_request(request) as span:
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
     except ValueError:
         pass  # Expected
 
@@ -102,7 +103,7 @@ def test_tracing_with_exception():
     del os.environ["PYPROC_TRACING_ENABLED"]
 
 
-def test_extract_inject_context():
+def test_extract_inject_context() -> None:
     """Test context extraction and injection."""
     if not HAS_OTEL:
         pytest.skip("OpenTelemetry not installed")
@@ -117,4 +118,3 @@ def test_extract_inject_context():
     context = manager.extract_context(carrier)
     # Context could be None or an empty context
     assert context is not None or not manager.enabled
-

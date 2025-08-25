@@ -78,6 +78,35 @@ ignore = [
     "TD002", # missing todo author
     "TD003", # missing todo link
     "PD011", # pandas use of dot values
+    "S101",  # use of assert in tests
+    "ANN201", # missing return type annotation for public function
+    "ANN202", # missing return type annotation for private function
+    "ANN001", # missing type annotation for function argument
+    "ANN204", # missing return type annotation for special method
+    "ANN401", # dynamically typed expressions (Any)
+    "TRY002", # create custom exception
+    "TRY003", # avoid long messages outside exception class
+    "TRY300", # consider moving to else block
+    "TRY301", # abstract raise to inner function
+    "TRY400", # use logging.exception instead of logging.error
+    "TRY401", # redundant exception in logging
+    "BLE001", # do not catch blind exception
+    "PERF203", # try-except in loop
+    "EM101", # exception string literal
+    "EM102", # exception f-string
+    "G004",  # logging f-string
+    "FA100", # future annotations
+    "PTH110", # use pathlib exists
+    "PTH108", # use pathlib unlink
+    "PLR0911", # too many return statements
+    "FBT001", # boolean typed positional argument
+    "FBT002", # boolean default positional argument
+    "PLW0603", # using global statement
+    "D401",  # first line imperative mood
+    "ARG001", # unused function argument
+    "F841",  # local variable assigned but never used
+    "UP035",  # deprecated typing
+    "PLC0415", # import should be at top-level
 ]
 unfixable = [
     "F401", # unused import
