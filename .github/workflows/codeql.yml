@@ -1,0 +1,86 @@
+name: "CodeQL Security Scan"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '**.py'
+      - 'worker/python/pyproject.toml'
+      - 'worker/python/uv.lock'
+      - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '**.py'
+      - 'worker/python/pyproject.toml'
+      - 'worker/python/uv.lock'
+      - '.github/workflows/codeql.yml'
+      - '.github/codeql/**'
+  schedule:
+    - cron: '30 2 * * 1' # 毎週月曜日 AM 2:30 (UTC)
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['go', 'python']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Go環境のセットアップ
+      - name: Setup Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Python環境のセットアップ
+      - name: Setup Python
+        if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # CodeQLエンジンの初期化
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      # Python依存関係のインストール (uvを使用)
+      - name: Install Python dependencies with uv
+        if: matrix.language == 'python'
+        run: |
+          pip install uv
+          cd worker/python
+          uv sync --all-extras --dev
+
+      # Autobuild (GoとPythonのビルドプロセスを自動検出)
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # CodeQL解析の実行
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
