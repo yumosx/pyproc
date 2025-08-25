@@ -53,6 +53,17 @@ jobs:
       - name: Build examples
         run: go build ./examples/basic
 
+      - name: Setup Python for tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python worker package
+        run: |
+          cd worker/python
+          pip install -e .
+          cd ../..
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
