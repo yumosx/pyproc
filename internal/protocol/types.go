@@ -8,6 +8,24 @@ import (
 	"fmt"
 )
 
+// MessageType defines the type of message being sent
+type MessageType string
+
+const (
+	// MessageTypeRequest is a regular request message
+	MessageTypeRequest MessageType = "request"
+	// MessageTypeResponse is a regular response message
+	MessageTypeResponse MessageType = "response"
+	// MessageTypeCancellation is a cancellation control message
+	MessageTypeCancellation MessageType = "cancellation"
+)
+
+// Message is the envelope for all messages between Go and Python
+type Message struct {
+	Type    MessageType     `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
 // Request represents a request from Go to Python
 type Request struct {
 	ID     uint64          `json:"id"`
@@ -21,6 +39,12 @@ type Response struct {
 	OK       bool            `json:"ok"`
 	Body     json.RawMessage `json:"body,omitempty"`
 	ErrorMsg string          `json:"error,omitempty"`
+}
+
+// CancellationRequest represents a cancellation signal for a specific request
+type CancellationRequest struct {
+	ID     uint64 `json:"id"`     // Request ID to cancel
+	Reason string `json:"reason"` // Reason for cancellation (e.g., "context cancelled", "timeout")
 }
 
 // NewRequest creates a new request with the given method and body
@@ -102,4 +126,34 @@ func (r *Response) Error() error {
 		return fmt.Errorf("unknown error")
 	}
 	return errors.New(r.ErrorMsg)
+}
+
+// NewCancellationRequest creates a new cancellation request
+func NewCancellationRequest(id uint64, reason string) *CancellationRequest {
+	return &CancellationRequest{
+		ID:     id,
+		Reason: reason,
+	}
+}
+
+// WrapMessage wraps a payload with a message type envelope
+func WrapMessage(msgType MessageType, payload interface{}) (*Message, error) {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	return &Message{
+		Type:    msgType,
+		Payload: payloadBytes,
+	}, nil
+}
+
+// UnwrapMessage extracts the payload from a message envelope
+func UnwrapMessage(data []byte) (*Message, error) {
+	var msg Message
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+	return &msg, nil
 }
