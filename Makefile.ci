@@ -1,0 +1,238 @@
+# CI Makefile
+# GitHub Actions CI configuration runnable with single commands
+
+.PHONY: all go-check python-check benchmark link-check clean help
+
+# Default target: run all checks
+all: go-check python-check benchmark link-check
+	@echo "✅ All checks completed"
+
+# ========== Go Tasks ==========
+
+# All Go checks
+go-check: go-fmt go-vet go-build go-lint go-test
+	@echo "✅ All Go checks completed"
+
+# Go format check
+go-fmt:
+	@echo "🔍 Checking Go fmt..."
+	@fmt_out=$$(gofmt -l . 2>/dev/null); \
+	if [ -n "$$fmt_out" ]; then \
+		echo "❌ Please run 'go fmt' on the following files:"; \
+		echo "$$fmt_out"; \
+		exit 1; \
+	else \
+		echo "✅ Go fmt check passed"; \
+	fi
+
+# Go vet
+go-vet:
+	@echo "🔍 Running Go vet..."
+	@pkgs=$$(go list ./... 2>/dev/null | grep -v '/bench' || true); \
+	if [ -n "$$pkgs" ]; then \
+		echo "$$pkgs" | xargs -r -n1 go vet; \
+		echo "✅ Go vet completed"; \
+	else \
+		echo "⚠️  No packages found for vet"; \
+	fi
+
+# Go build
+go-build: go-build-packages go-build-examples
+	@echo "✅ Go build completed"
+
+go-build-packages:
+	@echo "🔨 Building Go packages..."
+	@pkgs=$$(go list ./... 2>/dev/null | grep -v '/bench' || true); \
+	if [ -n "$$pkgs" ]; then \
+		echo "$$pkgs" | xargs -r -n1 go build; \
+	else \
+		echo "⚠️  No packages found to build"; \
+	fi
+
+go-build-examples:
+	@echo "🔨 Building Go examples..."
+	@if [ -d "./examples/basic" ]; then \
+		go build ./examples/basic; \
+	else \
+		echo "⚠️  examples/basic directory not found"; \
+	fi
+
+# golangci-lint
+go-lint:
+	@echo "🔍 Running golangci-lint..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run --timeout=5m; \
+		echo "✅ golangci-lint completed"; \
+	else \
+		echo "⚠️  golangci-lint not installed"; \
+		echo "    Install: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin"; \
+	fi
+
+# Go test
+go-test:
+	@echo "🧪 Running Go tests..."
+	@pkgs=$$(go list ./... 2>/dev/null | grep -v '/bench' || true); \
+	if [ -n "$$pkgs" ]; then \
+		echo "$$pkgs" | xargs -r -n1 go test -timeout 5m -v -race; \
+		echo "✅ Go tests completed"; \
+	else \
+		echo "⚠️  No packages found to test"; \
+	fi
+
+# ========== Python Tasks ==========
+
+# All Python checks
+python-check: python-setup python-lint python-format python-test
+	@echo "✅ All Python checks completed"
+
+# Python environment setup
+python-setup:
+	@echo "🔧 Setting up Python environment..."
+	@if [ -d "worker/python" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			cd worker/python && uv sync --all-extras --dev; \
+		elif command -v pip >/dev/null 2>&1; then \
+			cd worker/python && pip install -e .; \
+		else \
+			echo "❌ Neither uv nor pip found"; \
+			exit 1; \
+		fi; \
+		echo "✅ Python environment setup completed"; \
+	else \
+		echo "⚠️  worker/python directory not found"; \
+	fi
+
+# Python lint (ruff check)
+python-lint:
+	@echo "🔍 Running Python lint check..."
+	@if [ -d "worker/python" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			cd worker/python && uv run ruff check .; \
+		elif command -v ruff >/dev/null 2>&1; then \
+			cd worker/python && ruff check .; \
+		else \
+			echo "⚠️  ruff not available"; \
+		fi; \
+		echo "✅ Python lint check completed"; \
+	fi
+
+# Python format check
+python-format:
+	@echo "🔍 Checking Python format..."
+	@if [ -d "worker/python" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			cd worker/python && uv run ruff format --check .; \
+		elif command -v ruff >/dev/null 2>&1; then \
+			cd worker/python && ruff format --check .; \
+		else \
+			echo "⚠️  ruff not available"; \
+		fi; \
+		echo "✅ Python format check completed"; \
+	fi
+
+# Python test
+python-test:
+	@echo "🧪 Running Python tests..."
+	@if [ -d "worker/python" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			cd worker/python && uv run pytest -q; \
+		elif command -v pytest >/dev/null 2>&1; then \
+			cd worker/python && pytest -q; \
+		else \
+			echo "⚠️  pytest not available"; \
+		fi; \
+		echo "✅ Python tests completed"; \
+	fi
+
+# ========== Benchmark ==========
+
+benchmark:
+	@echo "⚡ Running benchmarks..."
+	@if [ -d "bench" ]; then \
+		cd bench && \
+		go test -bench=BenchmarkLatencyPercentiles -benchmem -benchtime=10s -timeout=5m | tee benchmark_results.txt; \
+		echo ""; \
+		echo "=== Performance Results ==="; \
+		grep -E "p50:|p95:|p99:" benchmark_results.txt 2>/dev/null || echo "No latency metrics found"; \
+		echo ""; \
+		if grep -q "p50:" benchmark_results.txt 2>/dev/null; then \
+			p50=$$(grep "p50:" benchmark_results.txt | sed -E 's/.*p50: ([0-9.]+).*/\1/'); \
+			p99=$$(grep "p99:" benchmark_results.txt | sed -E 's/.*p99: ([0-9.]+).*/\1/'); \
+			echo "Checking performance gates..."; \
+			if [ ! -z "$$p50" ]; then \
+				if [ $$(echo "$$p50 > 100" | bc -l 2>/dev/null || echo 0) -eq 1 ]; then \
+					echo "⚠️  p50 latency $${p50}µs exceeds target 100µs"; \
+				else \
+					echo "✅ p50 latency $${p50}µs meets target (<100µs)"; \
+				fi; \
+			fi; \
+			if [ ! -z "$$p99" ]; then \
+				if [ $$(echo "$$p99 > 500" | bc -l 2>/dev/null || echo 0) -eq 1 ]; then \
+					echo "⚠️  p99 latency $${p99}µs exceeds target 500µs"; \
+				else \
+					echo "✅ p99 latency $${p99}µs meets target (<500µs)"; \
+				fi; \
+			fi; \
+		fi; \
+	else \
+		echo "⚠️  bench directory not found"; \
+	fi
+
+# ========== Link Check ==========
+
+link-check:
+	@echo "🔗 Checking links..."
+	@if command -v lychee >/dev/null 2>&1; then \
+		if [ -f ".lychee.toml" ]; then \
+			lychee --config .lychee.toml README.md "docs/**/*.md" 2>/dev/null || true; \
+		else \
+			lychee README.md "docs/**/*.md" 2>/dev/null || true; \
+		fi; \
+		echo "✅ Link check completed"; \
+	else \
+		echo "⚠️  lychee not installed"; \
+		echo "    Install: cargo install lychee"; \
+	fi
+
+# ========== Utilities ==========
+
+# Clean up
+clean:
+	@echo "🧹 Cleaning up..."
+	@find . -type f -name "*.test" -delete 2>/dev/null || true
+	@find . -type f -name "*.out" -delete 2>/dev/null || true
+	@find . -type f -name "benchmark_results.txt" -delete 2>/dev/null || true
+	@echo "✅ Clean up completed"
+
+# Help
+help:
+	@echo "Available commands:"
+	@echo ""
+	@echo "  make all          - Run all checks"
+	@echo ""
+	@echo "Go:"
+	@echo "  make go-check     - Run all Go checks"
+	@echo "  make go-fmt       - Check Go formatting"
+	@echo "  make go-vet       - Run Go vet"
+	@echo "  make go-build     - Build Go packages"
+	@echo "  make go-lint      - Run golangci-lint"
+	@echo "  make go-test      - Run Go tests"
+	@echo ""
+	@echo "Python:"
+	@echo "  make python-check - Run all Python checks"
+	@echo "  make python-setup - Setup Python environment"
+	@echo "  make python-lint  - Run Python lint check"
+	@echo "  make python-format - Check Python formatting"
+	@echo "  make python-test  - Run Python tests"
+	@echo ""
+	@echo "Other:"
+	@echo "  make benchmark    - Run benchmarks"
+	@echo "  make link-check   - Check links"
+	@echo "  make clean        - Remove temporary files"
+	@echo "  make help         - Show this help"
+
+# Short aliases
+fmt: go-fmt python-format
+test: go-test python-test
+lint: go-lint python-lint
+build: go-build
