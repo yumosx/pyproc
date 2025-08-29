@@ -19,7 +19,7 @@ func createTestPool(t *testing.T, id string) *Pool {
 	poolOpts := PoolOptions{
 		Config: PoolConfig{
 			Workers:        1,
-			MaxInFlight:    3,  // Allow 3 concurrent requests for the concurrent test
+			MaxInFlight:    3, // Allow 3 concurrent requests for the concurrent test
 			HealthInterval: 100 * time.Millisecond,
 		},
 		WorkerConfig: WorkerConfig{
@@ -48,13 +48,13 @@ func createTestPool(t *testing.T, id string) *Pool {
 
 	// Give workers time to stabilize and create connections
 	time.Sleep(500 * time.Millisecond)
-	
+
 	// Clean up socket file on test completion
 	t.Cleanup(func() {
 		// Clean up the socket file directory
 		_ = os.RemoveAll(filepath.Dir(socketPath))
 	})
-	
+
 	return pool
 }
 
@@ -139,7 +139,7 @@ func TestContextCancellation(t *testing.T) {
 				defer cancel()
 
 				input := map[string]interface{}{
-					"duration": 5.0,  // Long enough duration to ensure cancellation happens
+					"duration": 5.0, // Long enough duration to ensure cancellation happens
 					"id":       id,
 				}
 				var output map[string]interface{}
@@ -160,7 +160,7 @@ func TestContextCancellation(t *testing.T) {
 			if err != nil {
 				errMsg := err.Error()
 				errors = append(errors, errMsg)
-				if err == context.DeadlineExceeded || 
+				if err == context.DeadlineExceeded ||
 					errMsg == "Cancelled: context cancelled" ||
 					errMsg == "Cancelled: connection closed" {
 					cancelCount++

@@ -187,13 +187,15 @@ class Worker:
                 current_request_id = None
 
                 # Send response in legacy format for now
-                # TODO: Switch to wrapped format once Go side is updated
+                # NOTE: Will switch to wrapped format once Go side is updated
                 response_bytes = self.framed_conn.codec.encode(response)
                 self.framed_conn.write_message(response_bytes)
 
             except BrokenPipeError:
                 # Connection closed due to cancellation - this is expected behavior
-                logger.debug("Connection closed by client during response (likely due to cancellation)")
+                logger.debug(
+                    "Connection closed by client during response (likely due to cancellation)",
+                )
                 break
             except Exception as e:
                 logger.exception("Error handling request")
@@ -217,44 +219,45 @@ class Worker:
             return {"id": req_id, "ok": False, "error": f"Method '{method}' not found"}
 
         # Create tracing context for this request
-        with self.tracing.trace_request(request) as span:
-            # Track request for cancellation
-            with self.cancellation_manager.track_request(req_id) as cancel_event:
-                try:
-                    # Call the exposed function
-                    func = _exposed_functions[method]
+        with (
+            self.tracing.trace_request(request) as span,
+            self.cancellation_manager.track_request(req_id) as cancel_event,
+        ):
+            try:
+                # Call the exposed function
+                func = _exposed_functions[method]
 
-                    # Check if function accepts cancel_event parameter
-                    sig = inspect.signature(func)
-                    if "cancel_event" in sig.parameters:
-                        # Function supports cancellation
-                        result = func(body, cancel_event=cancel_event)
-                    else:
-                        # Function doesn't support cancellation, just call it
-                        result = func(body)
+                # Check if function accepts cancel_event parameter
+                sig = inspect.signature(func)
+                if "cancel_event" in sig.parameters:
+                    # Function supports cancellation
+                    result = func(body, cancel_event=cancel_event)
+                else:
+                    # Function doesn't support cancellation, just call it
+                    result = func(body)
 
-                    response = {"id": req_id, "ok": True, "body": result}
+                response = {"id": req_id, "ok": True, "body": result}
 
-                    # Add trace headers to response
-                    self.tracing.add_response_headers(response)
+                # Add trace headers to response
+                self.tracing.add_response_headers(response)
 
-                    return response
+                return response
 
-                except CancellationError as e:
-                    # Request was cancelled
-                    logger.info(f"Request {req_id} cancelled: {e.reason}")
-                    return {"id": req_id, "ok": False, "error": f"Cancelled: {e.reason}"}
+            except CancellationError as e:
+                # Request was cancelled
+                logger.info(f"Request {req_id} cancelled: {e.reason}")
+                return {"id": req_id, "ok": False, "error": f"Cancelled: {e.reason}"}
 
-                except Exception as e:
-                    # Capture the full traceback for debugging
-                    tb = traceback.format_exc()
-                    logger.exception("Error in method '%s': %s", method, tb)
+            except Exception as e:
+                # Capture the full traceback for debugging
+                tb = traceback.format_exc()
+                logger.exception("Error in method '%s': %s", method, tb)
 
-                    if span:
-                        # Record exception in span
-                        span.record_exception(e)
+                if span:
+                    # Record exception in span
+                    span.record_exception(e)
 
-                    return {"id": req_id, "ok": False, "error": str(e)}
+                return {"id": req_id, "ok": False, "error": str(e)}
 
     def _handle_cancellation(self, cancellation_msg: dict[str, Any]) -> None:
         """Handle a cancellation message from Go.
