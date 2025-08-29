@@ -36,6 +36,19 @@ type Pool struct {
 	healthMu     sync.RWMutex
 	healthStatus HealthStatus
 	healthCancel context.CancelFunc
+
+	// Request tracking for cancellation
+	activeRequests   map[uint64]*activeRequest
+	activeRequestsMu sync.RWMutex
+}
+
+// activeRequest tracks an in-flight request for cancellation support
+type activeRequest struct {
+	id         uint64
+	workerIdx  int
+	conn       net.Conn
+	cancelOnce sync.Once
+	done       chan struct{}
 }
 
 // poolWorker wraps a Worker with connection pooling
@@ -70,10 +83,11 @@ func NewPool(opts PoolOptions, logger *Logger) (*Pool, error) {
 	}
 
 	pool := &Pool{
-		opts:      opts,
-		logger:    logger,
-		workers:   make([]*poolWorker, opts.Config.Workers),
-		semaphore: make(chan struct{}, opts.Config.Workers*opts.Config.MaxInFlight),
+		opts:           opts,
+		logger:         logger,
+		workers:        make([]*poolWorker, opts.Config.Workers),
+		semaphore:      make(chan struct{}, opts.Config.Workers*opts.Config.MaxInFlight),
+		activeRequests: make(map[uint64]*activeRequest),
 	}
 
 	// Create workers
@@ -159,13 +173,15 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 
 	// Select worker using round-robin
 	idx := p.nextIdx.Add(1) - 1
-	pw := p.workers[idx%uint64(len(p.workers))]
+	workerIdx := int(idx % uint64(len(p.workers)))
+	pw := p.workers[workerIdx]
 
 	if !pw.healthy.Load() {
 		// Try to find a healthy worker
-		for _, w := range p.workers {
+		for i, w := range p.workers {
 			if w.healthy.Load() {
 				pw = w
+				workerIdx = i
 				break
 			}
 		}
@@ -187,22 +203,51 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 		}
 	}
 
-	// Return connection to pool after use
+	// Generate request ID
+	reqID := pw.requestID.Add(1)
+
+	// Track active request for cancellation
+	activeReq := &activeRequest{
+		id:        reqID,
+		workerIdx: workerIdx,
+		conn:      conn,
+		done:      make(chan struct{}),
+	}
+	p.activeRequestsMu.Lock()
+	p.activeRequests[reqID] = activeReq
+	p.activeRequestsMu.Unlock()
+
+	// Monitor context for cancellation
+	go p.monitorCancellation(ctx, activeReq)
+
+	// Flag to track if connection was closed due to cancellation
+	connClosed := false
+
+	// Clean up active request and return connection on exit
 	defer func() {
-		select {
-		case pw.connPool <- conn:
-		default:
-			_ = conn.Close()
+		close(activeReq.done)
+		p.activeRequestsMu.Lock()
+		delete(p.activeRequests, reqID)
+		p.activeRequestsMu.Unlock()
+
+		// Return connection to pool only if not closed
+		if !connClosed {
+			select {
+			case pw.connPool <- conn:
+			default:
+				_ = conn.Close()
+			}
 		}
 	}()
 
 	// Send request
-	reqID := pw.requestID.Add(1)
 	req, err := protocol.NewRequest(reqID, method, input)
 	if err != nil {
 		return err
 	}
 
+	// For now, send in legacy format for backward compatibility
+	// TODO: Switch to wrapped format once Python side is fully tested
 	framer := framing.NewFramer(conn)
 	reqData, err := req.Marshal()
 	if err != nil {
@@ -210,6 +255,7 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 	}
 
 	if err := framer.WriteMessage(reqData); err != nil {
+		connClosed = true
 		_ = conn.Close() // Connection is bad, don't return to pool
 		return err
 	}
@@ -217,13 +263,23 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 	// Read response
 	respData, err := framer.ReadMessage()
 	if err != nil {
-		_ = conn.Close() // Connection is bad, don't return to pool
-		return err
+		// Check if error is due to cancellation
+		select {
+		case <-ctx.Done():
+			connClosed = true
+			return ctx.Err()
+		default:
+			connClosed = true
+			_ = conn.Close() // Connection is bad, don't return to pool
+			return err
+		}
 	}
 
+	// For now, handle legacy format
+	// TODO: Switch to wrapped format once Python side is fully tested
 	var resp protocol.Response
 	if err := resp.Unmarshal(respData); err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	if !resp.OK {
@@ -235,7 +291,7 @@ func (p *Pool) Call(ctx context.Context, method string, input interface{}, outpu
 		// Add worker ID to response
 		var result map[string]interface{}
 		if err := json.Unmarshal(resp.Body, &result); err == nil {
-			result["worker_id"] = float64(idx % uint64(len(p.workers)))
+			result["worker_id"] = float64(workerIdx)
 			modifiedBody, _ := json.Marshal(result)
 			resp.Body = modifiedBody
 		}
@@ -355,5 +411,54 @@ func (p *Pool) updateHealthStatus() {
 	if healthy < len(p.workers) {
 		p.logger.Warn("some workers are unhealthy",
 			"healthy", healthy, "total", len(p.workers))
+	}
+}
+
+// monitorCancellation monitors the context and sends cancellation if needed
+func (p *Pool) monitorCancellation(ctx context.Context, req *activeRequest) {
+	select {
+	case <-ctx.Done():
+		// Context was cancelled, send cancellation message and close connection
+		req.cancelOnce.Do(func() {
+			p.logger.Debug("context cancelled, sending cancellation", "request_id", req.id)
+			// Try to send cancellation message first
+			p.sendCancellation(req)
+			// Then close the connection to ensure cancellation
+			if req.conn != nil {
+				_ = req.conn.Close()
+			}
+		})
+	case <-req.done:
+		// Request completed normally
+		return
+	}
+}
+
+// sendCancellation sends a cancellation message to the Python worker
+func (p *Pool) sendCancellation(req *activeRequest) {
+	p.logger.Debug("sending cancellation", "request_id", req.id)
+
+	// Create cancellation request
+	cancelReq := protocol.NewCancellationRequest(req.id, "context cancelled")
+
+	// Wrap in message envelope
+	msgEnvelope, err := protocol.WrapMessage(protocol.MessageTypeCancellation, cancelReq)
+	if err != nil {
+		p.logger.Error("failed to create cancellation message", "error", err)
+		return
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(msgEnvelope)
+	if err != nil {
+		p.logger.Error("failed to marshal cancellation message", "error", err)
+		return
+	}
+
+	// Send cancellation message using the same connection
+	// This is best-effort, if it fails we still close the connection
+	framer := framing.NewFramer(req.conn)
+	if err := framer.WriteMessage(data); err != nil {
+		p.logger.Debug("failed to send cancellation message, will rely on connection close", "error", err)
 	}
 }

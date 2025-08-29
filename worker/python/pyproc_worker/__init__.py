@@ -6,6 +6,7 @@ allowing Python functions to be exposed and called from Go.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 import socket
@@ -15,6 +16,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
+from .cancellation import CancellationError, CancellationManager
 from .codec import Codec, get_codec
 from .tracing import get_tracing
 
@@ -97,6 +99,7 @@ class Worker:
         self.conn = None
         self.framed_conn = None
         self.tracing = get_tracing()
+        self.cancellation_manager = CancellationManager()
         logger.info("Using codec: %s", self.codec.name)
 
     def start(self) -> None:
@@ -135,25 +138,65 @@ class Worker:
 
     def _handle_connection(self) -> None:
         """Handle requests on the current connection."""
+        current_request_id = None
         while True:
             try:
-                # Read request
+                # Read message
                 message = self.framed_conn.read_message()
                 if not message:
                     logger.info("Connection closed by client")
+                    # If we have an active request, mark it as cancelled
+                    if current_request_id is not None:
+                        self.cancellation_manager.cancel_request(
+                            current_request_id,
+                            "connection closed",
+                        )
+                        current_request_id = None
                     break
 
-                # Parse request
-                request = self.framed_conn.codec.decode(message)
+                # Parse message
+                msg_data = self.framed_conn.codec.decode(message)
+
+                # Check if it's a wrapped message with type
+                if isinstance(msg_data, dict) and "type" in msg_data:
+                    msg_type = msg_data.get("type")
+                    payload = msg_data.get("payload", {})
+
+                    if msg_type == "cancellation":
+                        # Handle cancellation message
+                        self._handle_cancellation(payload)
+                        continue  # No response needed for cancellation
+                    if msg_type == "request":
+                        request = payload
+                    else:
+                        logger.warning(f"Unknown message type: {msg_type}")
+                        continue
+                else:
+                    # Legacy format - treat as request
+                    request = msg_data
+
                 logger.debug(f"Received request: {request}")
+
+                # Track current request ID for cancellation
+                current_request_id = request.get("id", 0)
 
                 # Process request
                 response = self._process_request(request)
 
-                # Send response
+                # Clear current request ID after processing
+                current_request_id = None
+
+                # Send response in legacy format for now
+                # NOTE: Will switch to wrapped format once Go side is updated
                 response_bytes = self.framed_conn.codec.encode(response)
                 self.framed_conn.write_message(response_bytes)
 
+            except BrokenPipeError:
+                # Connection closed due to cancellation - this is expected behavior
+                logger.debug(
+                    "Connection closed by client during response (likely due to cancellation)",
+                )
+                break
             except Exception as e:
                 logger.exception("Error handling request")
                 # Try to send error response
@@ -176,11 +219,22 @@ class Worker:
             return {"id": req_id, "ok": False, "error": f"Method '{method}' not found"}
 
         # Create tracing context for this request
-        with self.tracing.trace_request(request) as span:
+        with (
+            self.tracing.trace_request(request) as span,
+            self.cancellation_manager.track_request(req_id) as cancel_event,
+        ):
             try:
                 # Call the exposed function
                 func = _exposed_functions[method]
-                result = func(body)
+
+                # Check if function accepts cancel_event parameter
+                sig = inspect.signature(func)
+                if "cancel_event" in sig.parameters:
+                    # Function supports cancellation
+                    result = func(body, cancel_event=cancel_event)
+                else:
+                    # Function doesn't support cancellation, just call it
+                    result = func(body)
 
                 response = {"id": req_id, "ok": True, "body": result}
 
@@ -188,6 +242,12 @@ class Worker:
                 self.tracing.add_response_headers(response)
 
                 return response
+
+            except CancellationError as e:
+                # Request was cancelled
+                logger.info(f"Request {req_id} cancelled: {e.reason}")
+                return {"id": req_id, "ok": False, "error": f"Cancelled: {e.reason}"}
+
             except Exception as e:
                 # Capture the full traceback for debugging
                 tb = traceback.format_exc()
@@ -198,6 +258,21 @@ class Worker:
                     span.record_exception(e)
 
                 return {"id": req_id, "ok": False, "error": str(e)}
+
+    def _handle_cancellation(self, cancellation_msg: dict[str, Any]) -> None:
+        """Handle a cancellation message from Go.
+
+        Args:
+            cancellation_msg: Cancellation message with 'id' and 'reason' fields
+
+        """
+        req_id = cancellation_msg.get("id", 0)
+        reason = cancellation_msg.get("reason", "context cancelled")
+
+        logger.info(f"Received cancellation for request {req_id}: {reason}")
+
+        # Cancel the request
+        self.cancellation_manager.cancel_request(req_id, reason)
 
 
 def run_worker(socket_path: str | None = None, codec_type: str = "auto") -> None:
